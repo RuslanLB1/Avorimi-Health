@@ -1,0 +1,31 @@
+{{define "book.html"}}{{template "header" .}}
+
+<section class="container section narrow">
+  <h1>Оформление записи</h1>
+  <div class="summary-box">
+    <div class="card-emoji">{{.Item.Emoji}}</div>
+    <div>
+      <h3>{{.Item.Name}}</h3>
+      <p class="muted">{{.Item.Category}} · {{when .Slot.When}}</p>
+      <p class="price">{{money .Item.Price}}</p>
+    </div>
+  </div>
+
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+
+  <form method="post" action="/book/{{.Slot.ID}}" class="form">
+    <label>Ваше имя
+      <input type="text" name="name" required placeholder="Иван Иванов">
+    </label>
+    <label>Телефон
+      <input type="tel" name="phone" required placeholder="+7 700 000 00 00">
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" name="use_subscription">
+      У меня есть подписка — использовать бесплатный визит
+    </label>
+    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+  </form>
+</section>
+
+{{template "footer" .}}{{end}}

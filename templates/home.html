@@ -1,0 +1,78 @@
+{{define "home.html"}}{{template "header" .}}
+
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-text">
+      <h1>Запишитесь к врачу<br>или на процедуру<br><span>здесь и сейчас</span></h1>
+      <p>Выбирайте время, оплачивайте приём онлайн за 1 минуту — без звонков и ожидания на линии.
+      Или оформите подписку и получайте визиты бесплатно.</p>
+      <div class="hero-actions">
+        <a href="/catalog" class="btn btn-primary">Найти врача или процедуру</a>
+        <a href="/subscriptions" class="btn btn-outline">Смотреть подписки</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-card-row"><span>🩺</span> Приём терапевта</div>
+      <div class="hero-card-row"><span>🧪</span> Анализы без очереди</div>
+      <div class="hero-card-row"><span>💳</span> Оплата картой онлайн</div>
+      <div class="hero-card-row"><span>♾️</span> Подписка на визиты</div>
+    </div>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-head">
+    <h2>Врачи</h2>
+    <a href="/catalog?type=doctor">Все врачи →</a>
+  </div>
+  <div class="grid">
+    {{range .Doctors}}
+    <a class="card" href="/item/{{.ID}}">
+      <div class="card-emoji">{{.Emoji}}</div>
+      <div class="card-body">
+        <h3>{{.Name}}</h3>
+        <p class="muted">{{.Category}} · ★ {{.Rating}}</p>
+        <p class="price">{{money .Price}}</p>
+      </div>
+    </a>
+    {{end}}
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-head">
+    <h2>Процедуры</h2>
+    <a href="/catalog?type=procedure">Все процедуры →</a>
+  </div>
+  <div class="grid">
+    {{range .Procedures}}
+    <a class="card" href="/item/{{.ID}}">
+      <div class="card-emoji">{{.Emoji}}</div>
+      <div class="card-body">
+        <h3>{{.Name}}</h3>
+        <p class="muted">{{.Category}} · ★ {{.Rating}}</p>
+        <p class="price">{{money .Price}}</p>
+      </div>
+    </a>
+    {{end}}
+  </div>
+</section>
+
+<section class="container section subs-teaser">
+  <div class="section-head">
+    <h2>Подписки на визиты</h2>
+    <a href="/subscriptions">Все планы →</a>
+  </div>
+  <div class="grid grid-3">
+    {{range .Plans}}
+    <div class="plan-card {{if .Highlight}}plan-highlight{{end}}">
+      <h3>{{.Name}}</h3>
+      <p class="plan-price">{{.Price}}</p>
+      <p class="muted">{{.Visits}} визитов в месяц бесплатно</p>
+      <a href="/subscribe/{{.ID}}" class="btn btn-primary btn-block">Оформить</a>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+{{template "footer" .}}{{end}}

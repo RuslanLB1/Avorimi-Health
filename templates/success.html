@@ -1,0 +1,32 @@
+{{define "success.html"}}{{template "header" .}}
+
+<section class="container section narrow center">
+  <div class="success-icon">✅</div>
+  <h1>Вы записаны!</h1>
+  <p class="muted">
+    {{if eq .Booking.Status "free_by_subscription"}}
+      Визит оплачен подпиской — с вас ничего не списано.
+    {{else}}
+      Оплата прошла успешно.
+    {{end}}
+  </p>
+
+  <div class="summary-box left">
+    <div class="card-emoji">{{.Item.Emoji}}</div>
+    <div>
+      <h3>{{.Item.Name}}</h3>
+      <p class="muted">{{.Item.Category}} · {{when .Slot.When}}</p>
+      <p class="muted">Запись №{{.Booking.ID}} на имя {{.Booking.Name}}</p>
+      <p class="price">
+        {{if eq .Booking.Status "free_by_subscription"}}Бесплатно по подписке{{else}}{{money .Booking.Price}} · оплачено{{end}}
+      </p>
+    </div>
+  </div>
+
+  <div class="hero-actions center">
+    <a href="/account?phone={{.Booking.Phone}}" class="btn btn-primary">Мои записи</a>
+    <a href="/catalog" class="btn btn-outline">Записаться ещё</a>
+  </div>
+</section>
+
+{{template "footer" .}}{{end}}

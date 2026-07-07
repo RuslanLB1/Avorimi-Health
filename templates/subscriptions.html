@@ -1,0 +1,21 @@
+{{define "subscriptions.html"}}{{template "header" .}}
+
+<section class="container section">
+  <h1>Подписки на визиты</h1>
+  <p class="muted">Оплачивайте посещения врачей и процедуры одной подпиской — без отдельной оплаты за каждый визит.</p>
+
+  <div class="grid grid-3">
+    {{range .Plans}}
+    <div class="plan-card {{if .Highlight}}plan-highlight{{end}}">
+      {{if .Highlight}}<div class="plan-badge">Популярный</div>{{end}}
+      <h3>{{.Name}}</h3>
+      <p class="plan-price">{{.Price}}</p>
+      <p class="muted">{{.Visits}} визитов в месяц бесплатно</p>
+      <p>{{.Description}}</p>
+      <a href="/subscribe/{{.ID}}" class="btn btn-primary btn-block">Оформить подписку</a>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+{{template "footer" .}}{{end}}

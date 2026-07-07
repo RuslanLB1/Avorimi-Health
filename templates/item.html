@@ -1,0 +1,26 @@
+{{define "item.html"}}{{template "header" .}}
+
+<section class="container section item-page">
+  <div class="item-hero">
+    <div class="card-emoji big">{{.Item.Emoji}}</div>
+    <div>
+      <h1>{{.Item.Name}}</h1>
+      <p class="muted">{{.Item.Category}} · {{.Item.Duration}} · ★ {{.Item.Rating}}</p>
+      <p>{{.Item.Description}}</p>
+      <p class="price price-lg">{{money .Item.Price}}</p>
+    </div>
+  </div>
+
+  <h2>Свободное время</h2>
+  {{if .Slots}}
+  <div class="slots-grid">
+    {{range .Slots}}
+    <a class="slot" href="/book/{{.ID}}">{{when .When}}</a>
+    {{end}}
+  </div>
+  {{else}}
+  <p class="muted">Свободных слотов пока нет, загляните позже.</p>
+  {{end}}
+</section>
+
+{{template "footer" .}}{{end}}

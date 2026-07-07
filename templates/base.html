@@ -1,0 +1,33 @@
+{{define "header"}}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Avorimi Health — запись к врачу онлайн</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo">Avorimi<span>Health</span></a>
+      <nav class="main-nav">
+        <a href="/catalog">Врачи и процедуры</a>
+        <a href="/subscriptions">Подписки</a>
+        <a href="/account">Мои записи</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+{{end}}
+
+{{define "footer"}}
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <p>Avorimi Health — демо-прототип платформы онлайн-записи к врачам и на процедуры.</p>
+    </div>
+  </footer>
+</body>
+</html>
+{{end}}

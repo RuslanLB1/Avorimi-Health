@@ -1,0 +1,22 @@
+{{define "subscribe_success.html"}}{{template "header" .}}
+
+<section class="container section narrow center">
+  <div class="success-icon">✅</div>
+  <h1>Подписка активна!</h1>
+  <p class="muted">Оплата прошла успешно.</p>
+
+  <div class="summary-box left">
+    <div>
+      <h3>{{.Plan.Name}}</h3>
+      <p class="muted">Доступно визитов: {{.Subscription.VisitsLeft}} из {{.Plan.Visits}}</p>
+      <p class="muted">Действует до {{when .Subscription.ExpiresAt}}</p>
+    </div>
+  </div>
+
+  <div class="hero-actions center">
+    <a href="/account?phone={{.Subscription.Phone}}" class="btn btn-primary">Мои записи</a>
+    <a href="/catalog" class="btn btn-outline">Записаться на визит</a>
+  </div>
+</section>
+
+{{template "footer" .}}{{end}}

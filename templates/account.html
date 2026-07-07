@@ -1,0 +1,47 @@
+{{define "account.html"}}{{template "header" .}}
+
+<section class="container section narrow">
+  <h1>Мои записи</h1>
+
+  <form method="get" action="/account" class="form form-inline">
+    <label>Телефон
+      <input type="tel" name="phone" value="{{.Phone}}" required placeholder="+7 700 000 00 00">
+    </label>
+    <button type="submit" class="btn btn-primary">Показать</button>
+  </form>
+
+  {{if .Phone}}
+    {{if .Subscription}}
+    <div class="summary-box left sub-box">
+      <div>
+        <h3>Подписка «{{.SubPlan.Name}}»</h3>
+        <p class="muted">Доступно визитов: {{.Subscription.VisitsLeft}} · действует до {{when .Subscription.ExpiresAt}}</p>
+      </div>
+    </div>
+    {{end}}
+
+    <h2>История записей</h2>
+    {{if .Bookings}}
+    <div class="bookings-list">
+      {{range .Bookings}}
+      <div class="summary-box left">
+        <div class="card-emoji">{{.Item.Emoji}}</div>
+        <div>
+          <h3>{{.Item.Name}}</h3>
+          <p class="muted">{{when .Slot.When}}</p>
+          <p class="price">
+            {{if eq .Booking.Status "free_by_subscription"}}Бесплатно по подписке
+            {{else if eq .Booking.Status "paid"}}{{money .Booking.Price}} · оплачено
+            {{else}}{{money .Booking.Price}} · ожидает оплаты{{end}}
+          </p>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="muted">По этому номеру записей пока нет.</p>
+    {{end}}
+  {{end}}
+</section>
+
+{{template "footer" .}}{{end}}

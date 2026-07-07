@@ -1,0 +1,27 @@
+{{define "subscribe.html"}}{{template "header" .}}
+
+<section class="container section narrow">
+  <h1>Оформление подписки</h1>
+
+  <div class="summary-box">
+    <div>
+      <h3>{{.Plan.Name}}</h3>
+      <p class="muted">{{.Plan.Visits}} визитов в месяц</p>
+      <p class="price">{{.Plan.Price}}</p>
+    </div>
+  </div>
+
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+
+  <form method="post" action="/subscribe/{{.Plan.ID}}" class="form">
+    <label>Ваше имя
+      <input type="text" name="name" required placeholder="Иван Иванов">
+    </label>
+    <label>Телефон
+      <input type="tel" name="phone" required placeholder="+7 700 000 00 00">
+    </label>
+    <button type="submit" class="btn btn-primary btn-block">Перейти к оплате</button>
+  </form>
+</section>
+
+{{template "footer" .}}{{end}}

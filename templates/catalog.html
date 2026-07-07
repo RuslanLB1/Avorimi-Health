@@ -1,0 +1,37 @@
+{{define "catalog.html"}}{{template "header" .}}
+
+<section class="container section">
+  <h1>Врачи и процедуры</h1>
+
+  <div class="filters">
+    <a class="chip {{if eq .ActiveType ""}}chip-active{{end}}" href="/catalog">Все</a>
+    <a class="chip {{if eq .ActiveType "doctor"}}chip-active{{end}}" href="/catalog?type=doctor">Врачи</a>
+    <a class="chip {{if eq .ActiveType "procedure"}}chip-active{{end}}" href="/catalog?type=procedure">Процедуры</a>
+  </div>
+
+  {{if .Categories}}
+  <div class="filters filters-sub">
+    <a class="chip {{if eq .ActiveCategory ""}}chip-active{{end}}" href="/catalog?type={{.ActiveType}}">Все категории</a>
+    {{range .Categories}}
+    <a class="chip {{if eq $.ActiveCategory .}}chip-active{{end}}" href="/catalog?type={{$.ActiveType}}&category={{.}}">{{.}}</a>
+    {{end}}
+  </div>
+  {{end}}
+
+  <div class="grid">
+    {{range .Items}}
+    <a class="card" href="/item/{{.ID}}">
+      <div class="card-emoji">{{.Emoji}}</div>
+      <div class="card-body">
+        <h3>{{.Name}}</h3>
+        <p class="muted">{{.Category}} · {{.Duration}} · ★ {{.Rating}}</p>
+        <p class="price">{{money .Price}}</p>
+      </div>
+    </a>
+    {{else}}
+    <p class="muted">Ничего не найдено по выбранным фильтрам.</p>
+    {{end}}
+  </div>
+</section>
+
+{{template "footer" .}}{{end}}

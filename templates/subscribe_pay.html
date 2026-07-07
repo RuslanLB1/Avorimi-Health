@@ -1,0 +1,37 @@
+{{define "subscribe_pay.html"}}{{template "header" .}}
+
+<section class="container section narrow">
+  <h1>Оплата подписки</h1>
+
+  <div class="summary-box">
+    <div>
+      <h3>{{.Plan.Name}}</h3>
+      <p class="muted">{{.Name}} · {{.Phone}}</p>
+    </div>
+  </div>
+
+  <div class="pay-amount">
+    <span>Сумма к оплате</span>
+    <strong>{{.Plan.Price}}</strong>
+  </div>
+
+  <form method="post" action="/subscribe/{{.Plan.ID}}/pay" class="form">
+    <input type="hidden" name="name" value="{{.Name}}">
+    <input type="hidden" name="phone" value="{{.Phone}}">
+    <label>Номер карты
+      <input type="text" value="4400 4300 0000 0000" disabled>
+    </label>
+    <div class="form-row">
+      <label>Срок действия
+        <input type="text" value="12/29" disabled>
+      </label>
+      <label>CVC
+        <input type="text" value="123" disabled>
+      </label>
+    </div>
+    <p class="muted small">Это демонстрационная оплата — реальное списание средств не производится.</p>
+    <button type="submit" class="btn btn-primary btn-block">Оплатить {{.Plan.Price}}</button>
+  </form>
+</section>
+
+{{template "footer" .}}{{end}}
