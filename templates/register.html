@@ -13,8 +13,12 @@
     <label>ИИН
       <input type="text" name="iin" required pattern="\d{12}" maxlength="12" placeholder="12 цифр">
     </label>
+    <p class="muted small notice">ℹ️ На приёме в клинике могут попросить показать удостоверение личности для сверки данных.</p>
     <label>Телефон
-      <input type="tel" name="phone" required placeholder="+7 700 000 00 00">
+      <div class="phone-input">
+        <span class="phone-prefix">+7</span>
+        <input type="tel" name="phone_local" required inputmode="numeric" pattern="[\d\s]{10,14}" maxlength="14" placeholder="701 234 56 78">
+      </div>
     </label>
     <label>Пароль
       <input type="password" name="password" required minlength="6" placeholder="Не короче 6 символов">

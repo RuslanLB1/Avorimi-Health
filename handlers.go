@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"sort"
@@ -114,6 +115,16 @@ func itemDetailHandler(w http.ResponseWriter, r *http.Request) {
 // --- Регистрация / вход ---
 
 var iinRe = regexp.MustCompile(`^\d{12}$`)
+var nonDigitRe = regexp.MustCompile(`\D`)
+
+// buildPhone собирает номер вида +7XXXXXXXXXX из введённых после "+7" цифр.
+func buildPhone(local string) (string, error) {
+	digits := nonDigitRe.ReplaceAllString(local, "")
+	if len(digits) != 10 {
+		return "", fmt.Errorf("введите+10+цифр+номера+телефона")
+	}
+	return "+7" + digits, nil
+}
 
 func registerFormHandler(w http.ResponseWriter, r *http.Request) {
 	render(w, r, "register.html", map[string]any{
@@ -128,7 +139,6 @@ func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	iin := strings.TrimSpace(r.FormValue("iin"))
 	fullName := strings.TrimSpace(r.FormValue("full_name"))
-	phone := normalizePhone(r.FormValue("phone"))
 	password := r.FormValue("password")
 	confirm := r.FormValue("confirm_password")
 
@@ -136,8 +146,13 @@ func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/register?error="+msg, http.StatusSeeOther)
 	}
 
-	if fullName == "" || phone == "" {
-		fail("Заполните+все+поля")
+	if fullName == "" {
+		fail("Заполните+ФИО")
+		return
+	}
+	phone, err := buildPhone(r.FormValue("phone_local"))
+	if err != nil {
+		fail(err.Error())
 		return
 	}
 	if !iinRe.MatchString(iin) {
@@ -181,9 +196,18 @@ func loginSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "некорректные данные формы", http.StatusBadRequest)
 		return
 	}
-	phone := normalizePhone(r.FormValue("phone"))
 	password := r.FormValue("password")
 	next := r.FormValue("next")
+
+	phone, err := buildPhone(r.FormValue("phone_local"))
+	if err != nil {
+		target := "/login?error=" + err.Error()
+		if next != "" {
+			target += "&next=" + next
+		}
+		http.Redirect(w, r, target, http.StatusSeeOther)
+		return
+	}
 
 	user, ok := store.GetUserByPhone(phone)
 	if !ok || !checkPassword(user.PasswordHash, password) {

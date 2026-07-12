@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -66,10 +65,6 @@ func hashPassword(pw string) (string, error) {
 
 func checkPassword(hash, pw string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(pw)) == nil
-}
-
-func normalizePhone(phone string) string {
-	return strings.TrimSpace(phone)
 }
 
 func setSessionCookie(w http.ResponseWriter, token string) {

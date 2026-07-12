@@ -353,6 +353,39 @@ input:disabled { background: var(--bg); color: var(--muted); }
 .checkbox-row input { width: auto; }
 .error { color: var(--danger); font-weight: 600; background: #fdeceb; padding: 10px 14px; border-radius: 10px; }
 
+.phone-input {
+  display: flex;
+  align-items: stretch;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.phone-input:focus-within { border-color: var(--purple); }
+.phone-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg);
+  font-weight: 700;
+  color: var(--muted);
+  border-right: 1px solid var(--border);
+}
+.phone-input input[type="tel"] {
+  border: none;
+  border-radius: 0;
+  flex: 1;
+  min-width: 0;
+}
+.phone-input input[type="tel"]:focus { outline: none; }
+
+.notice {
+  background: #f1edff;
+  border: 1px solid #ddd3ff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: -6px 0 0;
+}
+
 .summary-box {
   display: flex;
   gap: 16px;
