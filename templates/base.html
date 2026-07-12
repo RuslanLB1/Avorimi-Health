@@ -12,7 +12,8 @@
     <div class="container header-inner">
       <a href="/" class="logo">Avorimi<span>Health</span></a>
       <nav class="main-nav">
-        <a href="/catalog">Врачи и процедуры</a>
+        <a href="/clinics">Клиники рядом</a>
+        <a href="/catalog">Все специалисты</a>
         <a href="/subscriptions">Подписки</a>
         {{if .CurrentUser}}<a href="/account">Мои записи</a>{{end}}
       </nav>
@@ -61,7 +62,7 @@
       <h4>Аккаунт</h4>
       <a href="/account" class="profile-link">📋 Мои записи</a>
       <a href="/subscriptions" class="profile-link">♾️ Тарифы подписки</a>
-      <a href="/catalog" class="profile-link">🔍 Найти врача или процедуру</a>
+      <a href="/clinics" class="profile-link">📍 Клиники рядом</a>
     </div>
 
     <form method="post" action="/logout">

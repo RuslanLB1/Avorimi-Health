@@ -17,27 +17,74 @@ type BookingView struct {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	all := store.AllItems()
-	var doctors, procedures []*Item
-	for _, it := range all {
-		if it.Type == TypeDoctor {
-			doctors = append(doctors, it)
-		} else {
-			procedures = append(procedures, it)
+	render(w, r, "home.html", map[string]any{
+		"Plans": store.AllPlans(),
+	})
+}
+
+// ClinicView — клиника вместе с расстоянием до пользователя (если геолокация известна).
+type ClinicView struct {
+	*Clinic
+	DistanceKm float64
+	ItemCount  int
+}
+
+func clinicsHandler(w http.ResponseWriter, r *http.Request) {
+	latStr := r.URL.Query().Get("lat")
+	lngStr := r.URL.Query().Get("lng")
+	hasLocation := latStr != "" && lngStr != ""
+	var lat, lng float64
+	if hasLocation {
+		var errLat, errLng error
+		lat, errLat = strconv.ParseFloat(latStr, 64)
+		lng, errLng = strconv.ParseFloat(lngStr, 64)
+		if errLat != nil || errLng != nil {
+			hasLocation = false
 		}
 	}
-	if len(doctors) > 4 {
-		doctors = doctors[:4]
+
+	clinics := store.AllClinics()
+	views := make([]ClinicView, 0, len(clinics))
+	for _, c := range clinics {
+		v := ClinicView{Clinic: c, ItemCount: len(store.ItemsByClinic(c.ID))}
+		if hasLocation {
+			v.DistanceKm = haversineKm(lat, lng, c.Lat, c.Lng)
+		}
+		views = append(views, v)
 	}
-	if len(procedures) > 4 {
-		procedures = procedures[:4]
+	if hasLocation {
+		sort.Slice(views, func(i, j int) bool { return views[i].DistanceKm < views[j].DistanceKm })
 	}
 
-	render(w, r, "home.html", map[string]any{
-		"Doctors":    doctors,
-		"Procedures": procedures,
-		"Plans":      store.AllPlans(),
+	render(w, r, "clinics.html", map[string]any{
+		"Clinics":     views,
+		"HasLocation": hasLocation,
 	})
+}
+
+func clinicDetailHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	clinic, ok := store.GetClinic(id)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	items := store.ItemsByClinic(id)
+
+	render(w, r, "clinic.html", map[string]any{
+		"Clinic": clinic,
+		"Items":  items,
+	})
+}
+
+// ItemView — врач/процедура вместе с названием клиники (для общего каталога).
+type ItemView struct {
+	*Item
+	ClinicName string
 }
 
 func catalogHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,8 +130,17 @@ func catalogHandler(w http.ResponseWriter, r *http.Request) {
 		sort.Slice(filtered, func(i, j int) bool { return filtered[i].Rating > filtered[j].Rating })
 	}
 
+	views := make([]ItemView, 0, len(filtered))
+	for _, it := range filtered {
+		clinicName := ""
+		if c, ok := store.GetClinic(it.ClinicID); ok {
+			clinicName = c.Name
+		}
+		views = append(views, ItemView{Item: it, ClinicName: clinicName})
+	}
+
 	render(w, r, "catalog.html", map[string]any{
-		"Items":          filtered,
+		"Items":          views,
 		"Categories":     categories,
 		"ActiveType":     activeType,
 		"ActiveCategory": activeCategory,
@@ -104,11 +160,13 @@ func itemDetailHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	clinic, _ := store.GetClinic(item.ClinicID)
 	slots := store.SlotsForItem(id)
 
 	render(w, r, "item.html", map[string]any{
-		"Item":  item,
-		"Slots": slots,
+		"Item":   item,
+		"Clinic": clinic,
+		"Slots":  slots,
 	})
 }
 

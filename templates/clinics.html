@@ -1,0 +1,50 @@
+{{define "clinics.html"}}{{template "header" .}}
+
+<section class="container section">
+  <h1>Клиники {{if .HasLocation}}рядом с вами{{end}}</h1>
+
+  <div class="notice location-prompt" id="locationPrompt">
+    {{if .HasLocation}}
+    <p>📍 Показываем клиники от ближайшей к вам.</p>
+    {{else}}
+    <p>📍 Разрешите доступ к геолокации, чтобы увидеть ближайшие к вам клиники — иначе список будет без сортировки по расстоянию.</p>
+    {{end}}
+    <button class="btn btn-outline btn-sm" onclick="requestLocation()" type="button">Определить моё местоположение</button>
+  </div>
+
+  <div class="grid">
+    {{range .Clinics}}
+    <a class="card clinic-card" href="/clinic/{{.ID}}">
+      <div class="card-emoji">{{.Emoji}}</div>
+      <div class="card-body">
+        <h3>{{.Name}}</h3>
+        <p class="muted">{{.Address}}</p>
+        <p class="muted">{{.ItemCount}} направлений</p>
+        {{if $.HasLocation}}<p class="price">📍 {{printf "%.1f" .DistanceKm}} км от вас</p>{{end}}
+      </div>
+    </a>
+    {{end}}
+  </div>
+</section>
+
+<script>
+function requestLocation() {
+  if (!navigator.geolocation) {
+    alert('Геолокация не поддерживается вашим браузером.');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('lat', pos.coords.latitude);
+    url.searchParams.set('lng', pos.coords.longitude);
+    window.location.href = url.toString();
+  }, function () {
+    alert('Не удалось определить геолокацию. Показаны все клиники без сортировки по расстоянию.');
+  });
+}
+{{if not .HasLocation}}
+requestLocation();
+{{end}}
+</script>
+
+{{template "footer" .}}{{end}}

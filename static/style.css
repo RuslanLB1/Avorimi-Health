@@ -386,6 +386,39 @@ input:disabled { background: var(--bg); color: var(--muted); }
   margin: -6px 0 0;
 }
 
+.location-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0 0 24px;
+}
+.location-prompt p { margin: 0; font-weight: 600; }
+
+.step-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
+}
+.step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+.step-card h3 { margin: 0 0 6px; font-size: 17px; }
+
+.clinic-card { align-items: flex-start; }
+
 .summary-box {
   display: flex;
   gap: 16px;

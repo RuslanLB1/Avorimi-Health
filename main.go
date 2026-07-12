@@ -55,6 +55,8 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	mux.HandleFunc("GET /{$}", homeHandler)
+	mux.HandleFunc("GET /clinics", clinicsHandler)
+	mux.HandleFunc("GET /clinic/{id}", clinicDetailHandler)
 	mux.HandleFunc("GET /catalog", catalogHandler)
 	mux.HandleFunc("GET /item/{id}", itemDetailHandler)
 

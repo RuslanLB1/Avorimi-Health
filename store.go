@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -15,8 +16,21 @@ const (
 	TypeProcedure ItemType = "procedure"
 )
 
+// Clinic — медицинский центр-партнёр. Avorimi Health выступает мостом между
+// клиникой и пациентом: у каждой клиники свой набор врачей/процедур (Item.ClinicID).
+type Clinic struct {
+	ID          int
+	Name        string
+	Address     string
+	Lat         float64
+	Lng         float64
+	Emoji       string
+	Description string
+}
+
 type Item struct {
 	ID          int
+	ClinicID    int
 	Type        ItemType
 	Name        string
 	Category    string
@@ -25,6 +39,18 @@ type Item struct {
 	Description string
 	Emoji       string
 	Rating      float64
+}
+
+// haversineKm считает расстояние по прямой между двумя точками в километрах —
+// используется, чтобы сортировать клиники по близости к геолокации пользователя.
+func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
+	const earthRadiusKm = 6371.0
+	dLat := (lat2 - lat1) * math.Pi / 180
+	dLng := (lng2 - lng1) * math.Pi / 180
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*math.Pi/180)*math.Cos(lat2*math.Pi/180)*math.Sin(dLng/2)*math.Sin(dLng/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return earthRadiusKm * c
 }
 
 type Slot struct {
@@ -84,6 +110,7 @@ type User struct {
 // Store — простое потокобезопасное in-memory хранилище для демо-прототипа.
 type Store struct {
 	mu            sync.Mutex
+	clinics       map[int]*Clinic
 	items         map[int]*Item
 	slots         map[int]*Slot
 	bookings      map[int]*Booking
@@ -99,6 +126,7 @@ type Store struct {
 
 func NewStore() *Store {
 	s := &Store{
+		clinics:       map[int]*Clinic{},
 		items:         map[int]*Item{},
 		slots:         map[int]*Slot{},
 		bookings:      map[int]*Booking{},
@@ -115,15 +143,40 @@ func NewStore() *Store {
 }
 
 func (s *Store) seed() {
+	clinics := []*Clinic{
+		{ID: 1, Name: "Экомед на Абая", Address: "г. Алматы, ул. Абая, 10", Lat: 43.2380, Lng: 76.9010, Emoji: "🏥", Description: "Многопрофильная клиника в центре города."},
+		{ID: 2, Name: "Da Vinci Clinic", Address: "г. Алматы, мкр. Самал-2, 89", Lat: 43.2200, Lng: 76.9550, Emoji: "🏨", Description: "Частная клиника с узкими специалистами и диагностикой."},
+		{ID: 3, Name: "Sova Clinic", Address: "г. Алматы, ул. Розыбакиева, 247", Lat: 43.2050, Lng: 76.8900, Emoji: "🏩", Description: "Семейная клиника с удобной записью день в день."},
+		{ID: 4, Name: "Family Health", Address: "г. Алматы, пр. Райымбека, 348", Lat: 43.2630, Lng: 76.9450, Emoji: "🏥", Description: "Педиатрия, терапия и лабораторная диагностика."},
+		{ID: 5, Name: "Асыл Ана", Address: "г. Алматы, ул. Жандосова, 98", Lat: 43.1950, Lng: 76.8650, Emoji: "🏨", Description: "Женское здоровье и общая терапия."},
+		{ID: 6, Name: "GMS Clinic Almaty", Address: "г. Алматы, ул. Наурызбай батыра, 44", Lat: 43.2500, Lng: 76.9450, Emoji: "🏩", Description: "Современная многопрофильная клиника премиум-класса."},
+	}
+	for _, c := range clinics {
+		s.clinics[c.ID] = c
+	}
+
 	items := []*Item{
-		{ID: 1, Type: TypeDoctor, Name: "Айгерим Сатпаева", Category: "Терапевт", Price: 8000, Duration: "30 мин", Description: "Первичный приём, консультация, назначение обследований.", Emoji: "🩺", Rating: 4.9},
-		{ID: 2, Type: TypeDoctor, Name: "Марат Ким", Category: "Кардиолог", Price: 12000, Duration: "40 мин", Description: "Консультация кардиолога, расшифровка ЭКГ.", Emoji: "❤️", Rating: 4.8},
-		{ID: 3, Type: TypeDoctor, Name: "Динара Абенова", Category: "Дерматолог", Price: 10000, Duration: "30 мин", Description: "Диагностика кожи, консультация по высыпаниям и родинкам.", Emoji: "🧴", Rating: 4.7},
-		{ID: 4, Type: TypeDoctor, Name: "Ержан Беков", Category: "Невролог", Price: 11000, Duration: "40 мин", Description: "Приём невролога, консультация при головных болях и головокружении.", Emoji: "🧠", Rating: 4.9},
-		{ID: 5, Type: TypeProcedure, Name: "УЗИ брюшной полости", Category: "Диагностика", Price: 9000, Duration: "20 мин", Description: "Комплексное ультразвуковое обследование органов брюшной полости.", Emoji: "🩻", Rating: 4.8},
-		{ID: 6, Type: TypeProcedure, Name: "Общий анализ крови", Category: "Анализы", Price: 3500, Duration: "10 мин", Description: "Забор крови и полный клинический анализ.", Emoji: "🧪", Rating: 4.9},
-		{ID: 7, Type: TypeProcedure, Name: "Массаж спины", Category: "Физиотерапия", Price: 7000, Duration: "45 мин", Description: "Лечебный массаж спины и шейно-воротниковой зоны.", Emoji: "💆", Rating: 4.7},
-		{ID: 8, Type: TypeProcedure, Name: "ЭКГ с расшифровкой", Category: "Диагностика", Price: 4500, Duration: "15 мин", Description: "Электрокардиограмма с заключением врача.", Emoji: "📈", Rating: 4.8},
+		{ID: 1, ClinicID: 1, Type: TypeDoctor, Name: "Айгерим Сатпаева", Category: "Терапевт", Price: 8000, Duration: "30 мин", Description: "Первичный приём, консультация, назначение обследований.", Emoji: "🩺", Rating: 4.9},
+		{ID: 2, ClinicID: 1, Type: TypeDoctor, Name: "Нурлан Жаксыбеков", Category: "Стоматолог", Price: 9000, Duration: "40 мин", Description: "Осмотр, консультация, лечение и профилактика кариеса.", Emoji: "🦷", Rating: 4.8},
+		{ID: 3, ClinicID: 1, Type: TypeProcedure, Name: "УЗИ брюшной полости", Category: "Диагностика", Price: 9000, Duration: "20 мин", Description: "Комплексное ультразвуковое обследование органов брюшной полости.", Emoji: "🩻", Rating: 4.8},
+
+		{ID: 4, ClinicID: 2, Type: TypeDoctor, Name: "Марат Ким", Category: "Кардиолог", Price: 12000, Duration: "40 мин", Description: "Консультация кардиолога, расшифровка ЭКГ.", Emoji: "❤️", Rating: 4.8},
+		{ID: 5, ClinicID: 2, Type: TypeDoctor, Name: "Асхат Тулегенов", Category: "Уролог", Price: 10500, Duration: "30 мин", Description: "Консультация уролога, УЗИ по показаниям.", Emoji: "🩺", Rating: 4.7},
+		{ID: 6, ClinicID: 2, Type: TypeProcedure, Name: "ЭКГ с расшифровкой", Category: "Диагностика", Price: 4500, Duration: "15 мин", Description: "Электрокардиограмма с заключением врача.", Emoji: "📈", Rating: 4.8},
+
+		{ID: 7, ClinicID: 3, Type: TypeDoctor, Name: "Динара Абенова", Category: "Дерматолог", Price: 10000, Duration: "30 мин", Description: "Диагностика кожи, консультация по высыпаниям и родинкам.", Emoji: "🧴", Rating: 4.7},
+		{ID: 8, ClinicID: 3, Type: TypeDoctor, Name: "Сауле Ищанова", Category: "Гинеколог", Price: 11000, Duration: "30 мин", Description: "Плановый осмотр и консультация гинеколога.", Emoji: "🩺", Rating: 4.9},
+		{ID: 9, ClinicID: 3, Type: TypeProcedure, Name: "Массаж спины", Category: "Физиотерапия", Price: 7000, Duration: "45 мин", Description: "Лечебный массаж спины и шейно-воротниковой зоны.", Emoji: "💆", Rating: 4.7},
+
+		{ID: 10, ClinicID: 4, Type: TypeDoctor, Name: "Ержан Беков", Category: "Невролог", Price: 11000, Duration: "40 мин", Description: "Приём невролога, консультация при головных болях и головокружении.", Emoji: "🧠", Rating: 4.9},
+		{ID: 11, ClinicID: 4, Type: TypeDoctor, Name: "Гульнара Оспанова", Category: "Педиатр", Price: 8500, Duration: "30 мин", Description: "Осмотр и консультация детского врача.", Emoji: "🧸", Rating: 4.9},
+		{ID: 12, ClinicID: 4, Type: TypeProcedure, Name: "Общий анализ крови", Category: "Анализы", Price: 3500, Duration: "10 мин", Description: "Забор крови и полный клинический анализ.", Emoji: "🧪", Rating: 4.9},
+
+		{ID: 13, ClinicID: 5, Type: TypeDoctor, Name: "Бекзат Оразов", Category: "Терапевт", Price: 7500, Duration: "30 мин", Description: "Первичная консультация терапевта.", Emoji: "🩺", Rating: 4.6},
+		{ID: 14, ClinicID: 5, Type: TypeDoctor, Name: "Айдана Смагулова", Category: "Стоматолог", Price: 8500, Duration: "40 мин", Description: "Лечение и профилактика заболеваний зубов и дёсен.", Emoji: "🦷", Rating: 4.7},
+
+		{ID: 15, ClinicID: 6, Type: TypeDoctor, Name: "Данияр Касымов", Category: "Уролог", Price: 13000, Duration: "30 мин", Description: "Консультация уролога в клинике премиум-класса.", Emoji: "🩺", Rating: 4.9},
+		{ID: 16, ClinicID: 6, Type: TypeProcedure, Name: "УЗИ малого таза", Category: "Диагностика", Price: 9500, Duration: "20 мин", Description: "Ультразвуковое исследование органов малого таза.", Emoji: "🩻", Rating: 4.8},
 	}
 	for _, it := range items {
 		s.items[it.ID] = it
@@ -155,6 +208,39 @@ func (s *Store) seed() {
 	for _, p := range plans {
 		s.plans[p.ID] = p
 	}
+}
+
+// --- Клиники ---
+
+func (s *Store) AllClinics() []*Clinic {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]*Clinic, 0, len(s.clinics))
+	for _, c := range s.clinics {
+		out = append(out, c)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+func (s *Store) GetClinic(id int) (*Clinic, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	c, ok := s.clinics[id]
+	return c, ok
+}
+
+func (s *Store) ItemsByClinic(clinicID int) []*Item {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]*Item, 0)
+	for _, it := range s.items {
+		if it.ClinicID == clinicID {
+			out = append(out, it)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
 }
 
 func (s *Store) AllItems() []*Item {

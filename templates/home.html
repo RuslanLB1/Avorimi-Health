@@ -3,58 +3,44 @@
 <section class="hero">
   <div class="container hero-inner">
     <div class="hero-text">
-      <h1>Запишитесь к врачу<br>или на процедуру<br><span>здесь и сейчас</span></h1>
-      <p>Выбирайте время, оплачивайте приём онлайн за 1 минуту — без звонков и ожидания на линии.
-      Или оформите подписку и получайте визиты бесплатно.</p>
+      <h1>Найдите клинику<br>рядом и запишитесь<br><span>здесь и сейчас</span></h1>
+      <p>Avorimi Health — мост между вами и клиниками города. Разрешите геолокацию,
+      выберите ближайшую клинику, а в ней — нужного врача или процедуру, и оплатите приём онлайн.
+      Без звонков и ожидания на линии.</p>
       <div class="hero-actions">
-        <a href="/catalog" class="btn btn-primary">Найти врача или процедуру</a>
+        <a href="/clinics" class="btn btn-primary">📍 Найти клинику рядом</a>
         <a href="/subscriptions" class="btn btn-outline">Смотреть подписки</a>
       </div>
     </div>
     <div class="hero-card">
-      <div class="hero-card-row"><span>🩺</span> Приём терапевта</div>
-      <div class="hero-card-row"><span>🧪</span> Анализы без очереди</div>
+      <div class="hero-card-row"><span>📍</span> Геолокация — клиники рядом с вами</div>
+      <div class="hero-card-row"><span>🏥</span> Выбор клиники и специалиста</div>
+      <div class="hero-card-row"><span>🗓️</span> Ближайшее свободное время</div>
       <div class="hero-card-row"><span>💳</span> Оплата картой онлайн</div>
-      <div class="hero-card-row"><span>♾️</span> Подписка на визиты</div>
     </div>
   </div>
 </section>
 
-<section class="container section">
+<section class="container section steps">
   <div class="section-head">
-    <h2>Врачи</h2>
-    <a href="/catalog?type=doctor">Все врачи →</a>
+    <h2>Как это работает</h2>
   </div>
-  <div class="grid">
-    {{range .Doctors}}
-    <a class="card" href="/item/{{.ID}}">
-      <div class="card-emoji">{{.Emoji}}</div>
-      <div class="card-body">
-        <h3>{{.Name}}</h3>
-        <p class="muted">{{.Category}} · ★ {{.Rating}}</p>
-        <p class="price">{{money .Price}}</p>
-      </div>
-    </a>
-    {{end}}
-  </div>
-</section>
-
-<section class="container section">
-  <div class="section-head">
-    <h2>Процедуры</h2>
-    <a href="/catalog?type=procedure">Все процедуры →</a>
-  </div>
-  <div class="grid">
-    {{range .Procedures}}
-    <a class="card" href="/item/{{.ID}}">
-      <div class="card-emoji">{{.Emoji}}</div>
-      <div class="card-body">
-        <h3>{{.Name}}</h3>
-        <p class="muted">{{.Category}} · ★ {{.Rating}}</p>
-        <p class="price">{{money .Price}}</p>
-      </div>
-    </a>
-    {{end}}
+  <div class="grid grid-3">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <h3>📍 Геолокация</h3>
+      <p class="muted">Разрешаете доступ к местоположению — город и адрес вводить не нужно.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <h3>🏥 Клиника</h3>
+      <p class="muted">Показываем клиники рядом с вами. Заходите в клинику и выбираете нужного специалиста.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <h3>🗓️ Запись</h3>
+      <p class="muted">Выбираете ближайшее свободное время и оплачиваете — без звонков в регистратуру.</p>
+    </div>
   </div>
 </section>
 
