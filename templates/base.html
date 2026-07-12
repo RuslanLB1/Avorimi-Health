@@ -14,10 +14,62 @@
       <nav class="main-nav">
         <a href="/catalog">Врачи и процедуры</a>
         <a href="/subscriptions">Подписки</a>
-        <a href="/account">Мои записи</a>
+        {{if .CurrentUser}}<a href="/account">Мои записи</a>{{end}}
       </nav>
+      <div class="header-actions">
+        {{if .CurrentUser}}
+        <button class="profile-btn" onclick="toggleProfile()" type="button">
+          <span class="avatar">{{initial .CurrentUser.FullName}}</span>
+          <span class="profile-btn-name">{{.CurrentUser.FullName}}</span>
+        </button>
+        {{else}}
+        <a href="/login" class="btn btn-outline btn-sm">Войти</a>
+        <a href="/register" class="btn btn-primary btn-sm">Регистрация</a>
+        {{end}}
+      </div>
     </div>
   </header>
+
+  {{if .CurrentUser}}
+  <div class="profile-overlay" id="profileOverlay" onclick="toggleProfile()"></div>
+  <aside class="profile-panel" id="profilePanel">
+    <div class="profile-panel-head">
+      <span class="avatar avatar-lg">{{initial .CurrentUser.FullName}}</span>
+      <div>
+        <h3>{{.CurrentUser.FullName}}</h3>
+        <p class="muted">{{.CurrentUser.Phone}}</p>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h4>Подписка</h4>
+      {{if .ActiveSub}}
+      <div class="sub-box left">
+        <div>
+          <strong>{{.ActiveSubPlan.Name}}</strong>
+          <p class="muted">Осталось визитов: {{.ActiveSub.VisitsLeft}} из {{.ActiveSubPlan.Visits}}</p>
+          <p class="muted">Действует до {{when .ActiveSub.ExpiresAt}}</p>
+        </div>
+      </div>
+      {{else}}
+      <p class="muted">Подписки пока нет.</p>
+      <a href="/subscriptions" class="btn btn-primary btn-block btn-sm">Оформить подписку</a>
+      {{end}}
+    </div>
+
+    <div class="profile-section">
+      <h4>Аккаунт</h4>
+      <a href="/account" class="profile-link">📋 Мои записи</a>
+      <a href="/subscriptions" class="profile-link">♾️ Тарифы подписки</a>
+      <a href="/catalog" class="profile-link">🔍 Найти врача или процедуру</a>
+    </div>
+
+    <form method="post" action="/logout">
+      <button type="submit" class="btn btn-outline btn-block">Выйти</button>
+    </form>
+  </aside>
+  {{end}}
+
   <main>
 {{end}}
 
@@ -28,6 +80,12 @@
       <p>Avorimi Health — демо-прототип платформы онлайн-записи к врачам и на процедуры.</p>
     </div>
   </footer>
+  <script>
+    function toggleProfile() {
+      document.getElementById('profilePanel').classList.toggle('open');
+      document.getElementById('profileOverlay').classList.toggle('open');
+    }
+  </script>
 </body>
 </html>
 {{end}}

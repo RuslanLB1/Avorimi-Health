@@ -2,7 +2,10 @@ package main
 
 import (
 	"net/http"
+	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 // BookingView объединяет запись, услугу и слот для удобного отображения в шаблонах.
@@ -29,21 +32,21 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		procedures = procedures[:4]
 	}
 
-	data := map[string]any{
+	render(w, r, "home.html", map[string]any{
 		"Doctors":    doctors,
 		"Procedures": procedures,
 		"Plans":      store.AllPlans(),
-	}
-	render(w, "home.html", data)
+	})
 }
 
 func catalogHandler(w http.ResponseWriter, r *http.Request) {
 	activeType := r.URL.Query().Get("type")
 	activeCategory := r.URL.Query().Get("category")
+	sortBy := r.URL.Query().Get("sort")
+	todayOnly := r.URL.Query().Get("today") == "1"
 
 	all := store.AllItems()
 	categorySet := map[string]bool{}
-	filtered := make([]*Item, 0, len(all))
 	for _, it := range all {
 		if activeType != "" && string(it.Type) != activeType {
 			continue
@@ -54,7 +57,9 @@ func catalogHandler(w http.ResponseWriter, r *http.Request) {
 	for c := range categorySet {
 		categories = append(categories, c)
 	}
+	sort.Strings(categories)
 
+	filtered := make([]*Item, 0, len(all))
 	for _, it := range all {
 		if activeType != "" && string(it.Type) != activeType {
 			continue
@@ -62,16 +67,29 @@ func catalogHandler(w http.ResponseWriter, r *http.Request) {
 		if activeCategory != "" && it.Category != activeCategory {
 			continue
 		}
+		if todayOnly && !store.HasSlotToday(it.ID) {
+			continue
+		}
 		filtered = append(filtered, it)
 	}
 
-	data := map[string]any{
+	switch sortBy {
+	case "price_asc":
+		sort.Slice(filtered, func(i, j int) bool { return filtered[i].Price < filtered[j].Price })
+	case "price_desc":
+		sort.Slice(filtered, func(i, j int) bool { return filtered[i].Price > filtered[j].Price })
+	case "rating":
+		sort.Slice(filtered, func(i, j int) bool { return filtered[i].Rating > filtered[j].Rating })
+	}
+
+	render(w, r, "catalog.html", map[string]any{
 		"Items":          filtered,
 		"Categories":     categories,
 		"ActiveType":     activeType,
 		"ActiveCategory": activeCategory,
-	}
-	render(w, "catalog.html", data)
+		"Sort":           sortBy,
+		"Today":          todayOnly,
+	})
 }
 
 func itemDetailHandler(w http.ResponseWriter, r *http.Request) {
@@ -87,14 +105,115 @@ func itemDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	slots := store.SlotsForItem(id)
 
-	data := map[string]any{
+	render(w, r, "item.html", map[string]any{
 		"Item":  item,
 		"Slots": slots,
-	}
-	render(w, "item.html", data)
+	})
 }
 
-func bookingFormHandler(w http.ResponseWriter, r *http.Request) {
+// --- Регистрация / вход ---
+
+var iinRe = regexp.MustCompile(`^\d{12}$`)
+
+func registerFormHandler(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "register.html", map[string]any{
+		"Error": r.URL.Query().Get("error"),
+	})
+}
+
+func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "некорректные данные формы", http.StatusBadRequest)
+		return
+	}
+	iin := strings.TrimSpace(r.FormValue("iin"))
+	fullName := strings.TrimSpace(r.FormValue("full_name"))
+	phone := normalizePhone(r.FormValue("phone"))
+	password := r.FormValue("password")
+	confirm := r.FormValue("confirm_password")
+
+	fail := func(msg string) {
+		http.Redirect(w, r, "/register?error="+msg, http.StatusSeeOther)
+	}
+
+	if fullName == "" || phone == "" {
+		fail("Заполните+все+поля")
+		return
+	}
+	if !iinRe.MatchString(iin) {
+		fail("ИИН+должен+содержать+ровно+12+цифр")
+		return
+	}
+	if len(password) < 6 {
+		fail("Пароль+должен+быть+не+короче+6+символов")
+		return
+	}
+	if password != confirm {
+		fail("Пароли+не+совпадают")
+		return
+	}
+
+	hash, err := hashPassword(password)
+	if err != nil {
+		http.Error(w, "не удалось создать аккаунт", http.StatusInternalServerError)
+		return
+	}
+	user, err := store.CreateUser(iin, fullName, phone, hash)
+	if err != nil {
+		fail("Пользователь+с+таким+телефоном+уже+зарегистрирован")
+		return
+	}
+
+	token := sessions.Create(user.ID)
+	setSessionCookie(w, token)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func loginFormHandler(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "login.html", map[string]any{
+		"Error": r.URL.Query().Get("error"),
+		"Next":  r.URL.Query().Get("next"),
+	})
+}
+
+func loginSubmitHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "некорректные данные формы", http.StatusBadRequest)
+		return
+	}
+	phone := normalizePhone(r.FormValue("phone"))
+	password := r.FormValue("password")
+	next := r.FormValue("next")
+
+	user, ok := store.GetUserByPhone(phone)
+	if !ok || !checkPassword(user.PasswordHash, password) {
+		target := "/login?error=Неверный+телефон+или+пароль"
+		if next != "" {
+			target += "&next=" + next
+		}
+		http.Redirect(w, r, target, http.StatusSeeOther)
+		return
+	}
+
+	token := sessions.Create(user.ID)
+	setSessionCookie(w, token)
+	if next == "" {
+		next = "/"
+	}
+	http.Redirect(w, r, next, http.StatusSeeOther)
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie(sessionCookieName); err == nil {
+		sessions.Destroy(cookie.Value)
+	}
+	clearSessionCookie(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// --- Запись на приём ---
+
+func bookingFormHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	slotID, err := strconv.Atoi(r.PathValue("slotID"))
 	if err != nil {
 		http.NotFound(w, r)
@@ -110,36 +229,29 @@ func bookingFormHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	_, hasSub := store.ActiveSubscription(user.ID)
 
-	data := map[string]any{
+	render(w, r, "book.html", map[string]any{
 		"Item":  item,
 		"Slot":  slot,
+		"HasSub": hasSub,
 		"Error": r.URL.Query().Get("error"),
-	}
-	render(w, "book.html", data)
+	})
 }
 
-func createBookingHandler(w http.ResponseWriter, r *http.Request) {
+func createBookingHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	slotID, err := strconv.Atoi(r.PathValue("slotID"))
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "некорректные данные формы", http.StatusBadRequest)
 		return
 	}
-	name := r.FormValue("name")
-	phone := r.FormValue("phone")
 	useSubscription := r.FormValue("use_subscription") == "on"
 
-	if name == "" || phone == "" {
-		http.Redirect(w, r, "/book/"+r.PathValue("slotID")+"?error=Заполните+имя+и+телефон", http.StatusSeeOther)
-		return
-	}
-
-	booking, err := store.CreateBooking(slotID, name, phone, useSubscription)
+	booking, err := store.CreateBooking(slotID, user.ID, useSubscription)
 	if err != nil {
 		http.Redirect(w, r, "/book/"+r.PathValue("slotID")+"?error="+err.Error(), http.StatusSeeOther)
 		return
@@ -152,14 +264,14 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/pay/"+strconv.Itoa(booking.ID), http.StatusSeeOther)
 }
 
-func paymentPageHandler(w http.ResponseWriter, r *http.Request) {
+func paymentPageHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	bookingID, err := strconv.Atoi(r.PathValue("bookingID"))
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 	booking, ok := store.GetBooking(bookingID)
-	if !ok {
+	if !ok || booking.UserID != user.ID {
 		http.NotFound(w, r)
 		return
 	}
@@ -169,17 +281,25 @@ func paymentPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	item, _ := store.GetItem(booking.ItemID)
 
-	data := map[string]any{
+	render(w, r, "pay.html", map[string]any{
 		"Booking": booking,
 		"Item":    item,
-	}
-	render(w, "pay.html", data)
+	})
 }
 
-func processPaymentHandler(w http.ResponseWriter, r *http.Request) {
+func processPaymentHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	bookingID, err := strconv.Atoi(r.PathValue("bookingID"))
 	if err != nil {
 		http.NotFound(w, r)
+		return
+	}
+	booking, ok := store.GetBooking(bookingID)
+	if !ok || booking.UserID != user.ID {
+		http.NotFound(w, r)
+		return
+	}
+	if _, err := payments.Charge(booking.Price, "Запись №"+strconv.Itoa(booking.ID)); err != nil {
+		http.Error(w, "Оплата не прошла: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 	if err := store.MarkPaid(bookingID); err != nil {
@@ -189,36 +309,36 @@ func processPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/success/"+strconv.Itoa(bookingID), http.StatusSeeOther)
 }
 
-func successHandler(w http.ResponseWriter, r *http.Request) {
+func successHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	bookingID, err := strconv.Atoi(r.PathValue("bookingID"))
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 	booking, ok := store.GetBooking(bookingID)
-	if !ok {
+	if !ok || booking.UserID != user.ID {
 		http.NotFound(w, r)
 		return
 	}
 	item, _ := store.GetItem(booking.ItemID)
 	slot, _ := store.GetSlot(booking.SlotID)
 
-	data := map[string]any{
+	render(w, r, "success.html", map[string]any{
 		"Booking": booking,
 		"Item":    item,
 		"Slot":    slot,
-	}
-	render(w, "success.html", data)
+	})
 }
+
+// --- Подписки ---
 
 func subscriptionsHandler(w http.ResponseWriter, r *http.Request) {
-	data := map[string]any{
+	render(w, r, "subscriptions.html", map[string]any{
 		"Plans": store.AllPlans(),
-	}
-	render(w, "subscriptions.html", data)
+	})
 }
 
-func subscribeFormHandler(w http.ResponseWriter, r *http.Request) {
+func subscribeFormHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	planID, err := strconv.Atoi(r.PathValue("planID"))
 	if err != nil {
 		http.NotFound(w, r)
@@ -229,14 +349,12 @@ func subscribeFormHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	data := map[string]any{
-		"Plan":  plan,
-		"Error": r.URL.Query().Get("error"),
-	}
-	render(w, "subscribe.html", data)
+	render(w, r, "subscribe.html", map[string]any{
+		"Plan": plan,
+	})
 }
 
-func subscribeToPaymentHandler(w http.ResponseWriter, r *http.Request) {
+func confirmSubscriptionHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	planID, err := strconv.Atoi(r.PathValue("planID"))
 	if err != nil {
 		http.NotFound(w, r)
@@ -247,74 +365,34 @@ func subscribeToPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "некорректные данные формы", http.StatusBadRequest)
+	if _, err := payments.Charge(plan.PriceValue, "Подписка "+plan.Name); err != nil {
+		http.Error(w, "Оплата не прошла: "+err.Error(), http.StatusBadGateway)
 		return
 	}
-	name := r.FormValue("name")
-	phone := r.FormValue("phone")
-	if name == "" || phone == "" {
-		http.Redirect(w, r, "/subscribe/"+r.PathValue("planID")+"?error=Заполните+имя+и+телефон", http.StatusSeeOther)
-		return
-	}
-
-	data := map[string]any{
-		"Plan":  plan,
-		"Name":  name,
-		"Phone": phone,
-	}
-	render(w, "subscribe_pay.html", data)
-}
-
-func confirmSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
-	planID, err := strconv.Atoi(r.PathValue("planID"))
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "некорректные данные формы", http.StatusBadRequest)
-		return
-	}
-	phone := r.FormValue("phone")
-
-	sub, err := store.CreateSubscription(phone, planID)
+	sub, err := store.CreateSubscription(user.ID, planID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	plan, _ := store.GetPlan(planID)
 
-	data := map[string]any{
+	render(w, r, "subscribe_success.html", map[string]any{
 		"Plan":         plan,
 		"Subscription": sub,
-	}
-	render(w, "subscribe_success.html", data)
+	})
 }
 
-func accountHandler(w http.ResponseWriter, r *http.Request) {
-	phone := r.URL.Query().Get("phone")
+// --- Личный кабинет ---
 
-	data := map[string]any{
-		"Phone": phone,
+func accountHandler(w http.ResponseWriter, r *http.Request, user *User) {
+	bookings := store.BookingsByUser(user.ID)
+	views := make([]BookingView, 0, len(bookings))
+	for _, b := range bookings {
+		item, _ := store.GetItem(b.ItemID)
+		slot, _ := store.GetSlot(b.SlotID)
+		views = append(views, BookingView{Booking: b, Item: item, Slot: slot})
 	}
 
-	if phone != "" {
-		bookings := store.BookingsByPhone(phone)
-		views := make([]BookingView, 0, len(bookings))
-		for _, b := range bookings {
-			item, _ := store.GetItem(b.ItemID)
-			slot, _ := store.GetSlot(b.SlotID)
-			views = append(views, BookingView{Booking: b, Item: item, Slot: slot})
-		}
-		data["Bookings"] = views
-
-		if sub, ok := store.ActiveSubscription(phone); ok {
-			plan, _ := store.GetPlan(sub.PlanID)
-			data["Subscription"] = sub
-			data["SubPlan"] = plan
-		}
-	}
-
-	render(w, "account.html", data)
+	render(w, r, "account.html", map[string]any{
+		"Bookings": views,
+	})
 }

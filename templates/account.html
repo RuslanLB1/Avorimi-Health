@@ -3,44 +3,51 @@
 <section class="container section narrow">
   <h1>Мои записи</h1>
 
-  <form method="get" action="/account" class="form form-inline">
-    <label>Телефон
-      <input type="tel" name="phone" value="{{.Phone}}" required placeholder="+7 700 000 00 00">
-    </label>
-    <button type="submit" class="btn btn-primary">Показать</button>
-  </form>
+  <div class="summary-box left">
+    <span class="avatar avatar-lg">{{initial .CurrentUser.FullName}}</span>
+    <div>
+      <h3>{{.CurrentUser.FullName}}</h3>
+      <p class="muted">{{.CurrentUser.Phone}}</p>
+    </div>
+  </div>
 
-  {{if .Phone}}
-    {{if .Subscription}}
-    <div class="summary-box left sub-box">
+  {{if .ActiveSub}}
+  <div class="summary-box left sub-box">
+    <div>
+      <h3>Подписка «{{.ActiveSubPlan.Name}}»</h3>
+      <p class="muted">Доступно визитов: {{.ActiveSub.VisitsLeft}} · действует до {{when .ActiveSub.ExpiresAt}}</p>
+    </div>
+  </div>
+  {{else}}
+  <div class="summary-box left sub-box-empty">
+    <div>
+      <h3>Подписки нет</h3>
+      <p class="muted">Оформите подписку, чтобы получать визиты бесплатно.</p>
+    </div>
+    <a href="/subscriptions" class="btn btn-primary btn-sm">Оформить</a>
+  </div>
+  {{end}}
+
+  <h2>История записей</h2>
+  {{if .Bookings}}
+  <div class="bookings-list">
+    {{range .Bookings}}
+    <div class="summary-box left">
+      <div class="card-emoji">{{.Item.Emoji}}</div>
       <div>
-        <h3>Подписка «{{.SubPlan.Name}}»</h3>
-        <p class="muted">Доступно визитов: {{.Subscription.VisitsLeft}} · действует до {{when .Subscription.ExpiresAt}}</p>
+        <h3>{{.Item.Name}}</h3>
+        <p class="muted">{{when .Slot.When}}</p>
+        <p class="price">
+          {{if eq .Booking.Status "free_by_subscription"}}Бесплатно по подписке
+          {{else if eq .Booking.Status "paid"}}{{money .Booking.Price}} · оплачено
+          {{else}}{{money .Booking.Price}} · ожидает оплаты{{end}}
+        </p>
       </div>
     </div>
     {{end}}
-
-    <h2>История записей</h2>
-    {{if .Bookings}}
-    <div class="bookings-list">
-      {{range .Bookings}}
-      <div class="summary-box left">
-        <div class="card-emoji">{{.Item.Emoji}}</div>
-        <div>
-          <h3>{{.Item.Name}}</h3>
-          <p class="muted">{{when .Slot.When}}</p>
-          <p class="price">
-            {{if eq .Booking.Status "free_by_subscription"}}Бесплатно по подписке
-            {{else if eq .Booking.Status "paid"}}{{money .Booking.Price}} · оплачено
-            {{else}}{{money .Booking.Price}} · ожидает оплаты{{end}}
-          </p>
-        </div>
-      </div>
-      {{end}}
-    </div>
-    {{else}}
-    <p class="muted">По этому номеру записей пока нет.</p>
-    {{end}}
+  </div>
+  {{else}}
+  <p class="muted">Записей пока нет.</p>
   {{end}}
 </section>
 

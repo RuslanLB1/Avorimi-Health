@@ -44,10 +44,9 @@ const (
 
 type Booking struct {
 	ID        int
+	UserID    int
 	SlotID    int
 	ItemID    int
-	Name      string
-	Phone     string
 	Price     int
 	Status    BookingStatus
 	CreatedAt time.Time
@@ -65,11 +64,21 @@ type SubscriptionPlan struct {
 }
 
 type UserSubscription struct {
-	Phone       string
+	UserID      int
 	PlanID      int
 	VisitsLeft  int
 	PurchasedAt time.Time
 	ExpiresAt   time.Time
+}
+
+// User — зарегистрированный аккаунт платформы.
+type User struct {
+	ID           int
+	IIN          string
+	FullName     string
+	Phone        string
+	PasswordHash string
+	CreatedAt    time.Time
 }
 
 // Store — простое потокобезопасное in-memory хранилище для демо-прототипа.
@@ -79,10 +88,13 @@ type Store struct {
 	slots         map[int]*Slot
 	bookings      map[int]*Booking
 	plans         map[int]*SubscriptionPlan
-	subscriptions map[string]*UserSubscription // key: phone
+	users         map[int]*User
+	usersByPhone  map[string]int
+	subscriptions map[int]*UserSubscription // key: userID (latest/active)
 
 	nextBookingID int
 	nextSlotID    int
+	nextUserID    int
 }
 
 func NewStore() *Store {
@@ -91,9 +103,12 @@ func NewStore() *Store {
 		slots:         map[int]*Slot{},
 		bookings:      map[int]*Booking{},
 		plans:         map[int]*SubscriptionPlan{},
-		subscriptions: map[string]*UserSubscription{},
+		users:         map[int]*User{},
+		usersByPhone:  map[string]int{},
+		subscriptions: map[int]*UserSubscription{},
 		nextBookingID: 1,
 		nextSlotID:    1,
+		nextUserID:    1,
 	}
 	s.seed()
 	return s
@@ -173,6 +188,25 @@ func (s *Store) SlotsForItem(itemID int) []*Slot {
 	return out
 }
 
+// HasSlotToday сообщает, есть ли у услуги свободное время сегодня (для фильтра "сегодня").
+func (s *Store) HasSlotToday(itemID int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	for _, sl := range s.slots {
+		if sl.ItemID == itemID && !sl.Booked && sl.When.After(now) && sameDay(sl.When, now) {
+			return true
+		}
+	}
+	return false
+}
+
+func sameDay(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
+}
+
 func (s *Store) GetSlot(id int) (*Slot, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -198,18 +232,59 @@ func (s *Store) GetPlan(id int) (*SubscriptionPlan, bool) {
 	return p, ok
 }
 
-// ActiveSubscription возвращает подписку по номеру телефона, если она ещё активна.
-func (s *Store) ActiveSubscription(phone string) (*UserSubscription, bool) {
+// --- Пользователи ---
+
+func (s *Store) CreateUser(iin, fullName, phone, passwordHash string) (*User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	sub, ok := s.subscriptions[phone]
+	if _, exists := s.usersByPhone[phone]; exists {
+		return nil, fmt.Errorf("пользователь с таким номером телефона уже зарегистрирован")
+	}
+	u := &User{
+		ID:           s.nextUserID,
+		IIN:          iin,
+		FullName:     fullName,
+		Phone:        phone,
+		PasswordHash: passwordHash,
+		CreatedAt:    time.Now(),
+	}
+	s.users[u.ID] = u
+	s.usersByPhone[phone] = u.ID
+	s.nextUserID++
+	return u, nil
+}
+
+func (s *Store) GetUser(id int) (*User, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	return u, ok
+}
+
+func (s *Store) GetUserByPhone(phone string) (*User, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	id, ok := s.usersByPhone[phone]
+	if !ok {
+		return nil, false
+	}
+	return s.users[id], true
+}
+
+// --- Подписки ---
+
+// ActiveSubscription возвращает подписку пользователя, если она ещё активна.
+func (s *Store) ActiveSubscription(userID int) (*UserSubscription, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	sub, ok := s.subscriptions[userID]
 	if !ok || sub.VisitsLeft <= 0 || sub.ExpiresAt.Before(time.Now()) {
 		return nil, false
 	}
 	return sub, true
 }
 
-func (s *Store) CreateSubscription(phone string, planID int) (*UserSubscription, error) {
+func (s *Store) CreateSubscription(userID, planID int) (*UserSubscription, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	plan, ok := s.plans[planID]
@@ -217,18 +292,20 @@ func (s *Store) CreateSubscription(phone string, planID int) (*UserSubscription,
 		return nil, fmt.Errorf("план не найден")
 	}
 	sub := &UserSubscription{
-		Phone:       phone,
+		UserID:      userID,
 		PlanID:      planID,
 		VisitsLeft:  plan.Visits,
 		PurchasedAt: time.Now(),
 		ExpiresAt:   time.Now().AddDate(0, 0, plan.PeriodDays),
 	}
-	s.subscriptions[phone] = sub
+	s.subscriptions[userID] = sub
 	return sub, nil
 }
 
+// --- Записи ---
+
 // CreateBooking резервирует слот и создаёт запись. useSubscription списывает визит с подписки.
-func (s *Store) CreateBooking(slotID int, name, phone string, useSubscription bool) (*Booking, error) {
+func (s *Store) CreateBooking(slotID, userID int, useSubscription bool) (*Booking, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -245,7 +322,7 @@ func (s *Store) CreateBooking(slotID int, name, phone string, useSubscription bo
 	price := item.Price
 
 	if useSubscription {
-		sub, ok := s.subscriptions[phone]
+		sub, ok := s.subscriptions[userID]
 		if !ok || sub.VisitsLeft <= 0 || sub.ExpiresAt.Before(time.Now()) {
 			return nil, fmt.Errorf("нет активной подписки с доступными визитами")
 		}
@@ -257,10 +334,9 @@ func (s *Store) CreateBooking(slotID int, name, phone string, useSubscription bo
 	slot.Booked = true
 	booking := &Booking{
 		ID:        s.nextBookingID,
+		UserID:    userID,
 		SlotID:    slotID,
 		ItemID:    item.ID,
-		Name:      name,
-		Phone:     phone,
 		Price:     price,
 		Status:    status,
 		CreatedAt: time.Now(),
@@ -290,13 +366,13 @@ func (s *Store) MarkPaid(bookingID int) error {
 	return nil
 }
 
-// BookingsByPhone для страницы "Мои записи".
-func (s *Store) BookingsByPhone(phone string) []*Booking {
+// BookingsByUser для личного кабинета.
+func (s *Store) BookingsByUser(userID int) []*Booking {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	out := make([]*Booking, 0)
 	for _, b := range s.bookings {
-		if b.Phone == phone {
+		if b.UserID == userID {
 			out = append(out, b)
 		}
 	}

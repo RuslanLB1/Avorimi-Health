@@ -11,19 +11,17 @@
     </div>
   </div>
 
+  <p class="muted">Запись оформляется на {{.CurrentUser.FullName}} · {{.CurrentUser.Phone}}</p>
+
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
 
   <form method="post" action="/book/{{.Slot.ID}}" class="form">
-    <label>Ваше имя
-      <input type="text" name="name" required placeholder="Иван Иванов">
-    </label>
-    <label>Телефон
-      <input type="tel" name="phone" required placeholder="+7 700 000 00 00">
-    </label>
+    {{if .HasSub}}
     <label class="checkbox-row">
-      <input type="checkbox" name="use_subscription">
+      <input type="checkbox" name="use_subscription" checked>
       У меня есть подписка — использовать бесплатный визит
     </label>
+    {{end}}
     <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
   </form>
 </section>

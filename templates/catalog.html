@@ -18,6 +18,23 @@
   </div>
   {{end}}
 
+  <form method="get" action="/catalog" class="filters-bar">
+    <input type="hidden" name="type" value="{{.ActiveType}}">
+    <input type="hidden" name="category" value="{{.ActiveCategory}}">
+    <label class="select-label">Сортировка
+      <select name="sort" onchange="this.form.submit()">
+        <option value="">По умолчанию</option>
+        <option value="price_asc" {{if eq .Sort "price_asc"}}selected{{end}}>Сначала дешевле</option>
+        <option value="price_desc" {{if eq .Sort "price_desc"}}selected{{end}}>Сначала дороже</option>
+        <option value="rating" {{if eq .Sort "rating"}}selected{{end}}>По рейтингу</option>
+      </select>
+    </label>
+    <label class="checkbox-row inline">
+      <input type="checkbox" name="today" value="1" {{if .Today}}checked{{end}} onchange="this.form.submit()">
+      Есть время сегодня
+    </label>
+  </form>
+
   <div class="grid">
     {{range .Items}}
     <a class="card" href="/item/{{.ID}}">

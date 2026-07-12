@@ -10,12 +10,16 @@ import (
 )
 
 var (
-	store *Store
-	tmpl  *template.Template
+	store    *Store
+	sessions *SessionManager
+	payments PaymentProvider
+	tmpl     *template.Template
 )
 
 func main() {
 	store = NewStore()
+	sessions = NewSessionManager()
+	payments = MockProvider{}
 
 	funcMap := template.FuncMap{
 		"money": func(v int) string {
@@ -33,6 +37,12 @@ func main() {
 			months := [...]string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
 			return t.Format("02 ") + months[t.Month()-1] + t.Format(", 15:04")
 		},
+		"initial": func(name string) string {
+			for _, r := range name {
+				return string(r)
+			}
+			return "?"
+		},
 	}
 
 	var err error
@@ -48,20 +58,25 @@ func main() {
 	mux.HandleFunc("GET /catalog", catalogHandler)
 	mux.HandleFunc("GET /item/{id}", itemDetailHandler)
 
-	mux.HandleFunc("GET /book/{slotID}", bookingFormHandler)
-	mux.HandleFunc("POST /book/{slotID}", createBookingHandler)
+	mux.HandleFunc("GET /register", registerFormHandler)
+	mux.HandleFunc("POST /register", registerSubmitHandler)
+	mux.HandleFunc("GET /login", loginFormHandler)
+	mux.HandleFunc("POST /login", loginSubmitHandler)
+	mux.HandleFunc("POST /logout", logoutHandler)
 
-	mux.HandleFunc("GET /pay/{bookingID}", paymentPageHandler)
-	mux.HandleFunc("POST /pay/{bookingID}", processPaymentHandler)
+	mux.HandleFunc("GET /book/{slotID}", requireAuth(bookingFormHandler))
+	mux.HandleFunc("POST /book/{slotID}", requireAuth(createBookingHandler))
 
-	mux.HandleFunc("GET /success/{bookingID}", successHandler)
+	mux.HandleFunc("GET /pay/{bookingID}", requireAuth(paymentPageHandler))
+	mux.HandleFunc("POST /pay/{bookingID}", requireAuth(processPaymentHandler))
+
+	mux.HandleFunc("GET /success/{bookingID}", requireAuth(successHandler))
 
 	mux.HandleFunc("GET /subscriptions", subscriptionsHandler)
-	mux.HandleFunc("GET /subscribe/{planID}", subscribeFormHandler)
-	mux.HandleFunc("POST /subscribe/{planID}", subscribeToPaymentHandler)
-	mux.HandleFunc("POST /subscribe/{planID}/pay", confirmSubscriptionHandler)
+	mux.HandleFunc("GET /subscribe/{planID}", requireAuth(subscribeFormHandler))
+	mux.HandleFunc("POST /subscribe/{planID}", requireAuth(confirmSubscriptionHandler))
 
-	mux.HandleFunc("GET /account", accountHandler)
+	mux.HandleFunc("GET /account", requireAuth(accountHandler))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -74,7 +89,20 @@ func main() {
 	}
 }
 
-func render(w http.ResponseWriter, name string, data any) {
+// render рендерит шаблон, подмешивая в data информацию о текущем пользователе
+// (для профиля/подписки в шапке сайта на любой странице).
+func render(w http.ResponseWriter, r *http.Request, name string, data map[string]any) {
+	if data == nil {
+		data = map[string]any{}
+	}
+	if user, ok := currentUser(r); ok {
+		data["CurrentUser"] = user
+		if sub, ok := store.ActiveSubscription(user.ID); ok {
+			plan, _ := store.GetPlan(sub.PlanID)
+			data["ActiveSub"] = sub
+			data["ActiveSubPlan"] = plan
+		}
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

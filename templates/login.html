@@ -1,0 +1,22 @@
+{{define "login.html"}}{{template "header" .}}
+
+<section class="container section narrow">
+  <h1>Вход</h1>
+
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+
+  <form method="post" action="/login" class="form">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <label>Телефон
+      <input type="tel" name="phone" required placeholder="+7 700 000 00 00">
+    </label>
+    <label>Пароль
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit" class="btn btn-primary btn-block">Войти</button>
+  </form>
+
+  <p class="muted center" style="margin-top:16px;">Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+</section>
+
+{{template "footer" .}}{{end}}

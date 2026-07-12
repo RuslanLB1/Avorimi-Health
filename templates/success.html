@@ -16,7 +16,7 @@
     <div>
       <h3>{{.Item.Name}}</h3>
       <p class="muted">{{.Item.Category}} · {{when .Slot.When}}</p>
-      <p class="muted">Запись №{{.Booking.ID}} на имя {{.Booking.Name}}</p>
+      <p class="muted">Запись №{{.Booking.ID}} на имя {{.CurrentUser.FullName}}</p>
       <p class="price">
         {{if eq .Booking.Status "free_by_subscription"}}Бесплатно по подписке{{else}}{{money .Booking.Price}} · оплачено{{end}}
       </p>
@@ -24,7 +24,7 @@
   </div>
 
   <div class="hero-actions center">
-    <a href="/account?phone={{.Booking.Phone}}" class="btn btn-primary">Мои записи</a>
+    <a href="/account" class="btn btn-primary">Мои записи</a>
     <a href="/catalog" class="btn btn-outline">Записаться ещё</a>
   </div>
 </section>

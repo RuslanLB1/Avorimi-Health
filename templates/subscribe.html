@@ -6,21 +6,30 @@
   <div class="summary-box">
     <div>
       <h3>{{.Plan.Name}}</h3>
-      <p class="muted">{{.Plan.Visits}} визитов в месяц</p>
+      <p class="muted">{{.Plan.Visits}} визитов в месяц · {{.CurrentUser.FullName}}</p>
       <p class="price">{{.Plan.Price}}</p>
     </div>
   </div>
 
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <div class="pay-amount">
+    <span>Сумма к оплате</span>
+    <strong>{{.Plan.Price}}</strong>
+  </div>
 
   <form method="post" action="/subscribe/{{.Plan.ID}}" class="form">
-    <label>Ваше имя
-      <input type="text" name="name" required placeholder="Иван Иванов">
+    <label>Номер карты
+      <input type="text" value="4400 4300 0000 0000" disabled>
     </label>
-    <label>Телефон
-      <input type="tel" name="phone" required placeholder="+7 700 000 00 00">
-    </label>
-    <button type="submit" class="btn btn-primary btn-block">Перейти к оплате</button>
+    <div class="form-row">
+      <label>Срок действия
+        <input type="text" value="12/29" disabled>
+      </label>
+      <label>CVC
+        <input type="text" value="123" disabled>
+      </label>
+    </div>
+    <p class="muted small">Это демонстрационная оплата — реальное списание средств не производится.</p>
+    <button type="submit" class="btn btn-primary btn-block">Оплатить {{.Plan.Price}}</button>
   </form>
 </section>
 
