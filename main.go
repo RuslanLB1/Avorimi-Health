@@ -57,6 +57,7 @@ func main() {
 	mux.HandleFunc("GET /{$}", homeHandler)
 	mux.HandleFunc("GET /clinics", clinicsHandler)
 	mux.HandleFunc("GET /clinic/{id}", clinicDetailHandler)
+	mux.HandleFunc("GET /clinic/{id}/exam/{category}", clinicCategoryHandler)
 	mux.HandleFunc("GET /catalog", catalogHandler)
 	mux.HandleFunc("GET /item/{id}", itemDetailHandler)
 

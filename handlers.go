@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"sort"
@@ -54,6 +55,8 @@ func clinicsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if hasLocation {
 		sort.Slice(views, func(i, j int) bool { return views[i].DistanceKm < views[j].DistanceKm })
+	} else {
+		rand.Shuffle(len(views), func(i, j int) { views[i], views[j] = views[j], views[i] })
 	}
 
 	render(w, r, "clinics.html", map[string]any{
@@ -73,11 +76,36 @@ func clinicDetailHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	items := store.ItemsByClinic(id)
+	groups := store.CategoriesByClinic(id)
 
 	render(w, r, "clinic.html", map[string]any{
 		"Clinic": clinic,
-		"Items":  items,
+		"Groups": groups,
+	})
+}
+
+func clinicCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	clinic, ok := store.GetClinic(id)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	category := r.PathValue("category")
+	items := store.ItemsByClinicCategory(id, category)
+	if len(items) == 0 {
+		http.NotFound(w, r)
+		return
+	}
+
+	render(w, r, "clinic_category.html", map[string]any{
+		"Clinic":   clinic,
+		"Category": category,
+		"Items":    items,
 	})
 }
 

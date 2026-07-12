@@ -8,20 +8,21 @@
     <div>
       <h1>{{.Clinic.Name}}</h1>
       <p class="muted">{{.Clinic.Address}}</p>
+      <p class="rating-pill">★ {{printf "%.1f" .Clinic.Rating}}</p>
       <p>{{.Clinic.Description}}</p>
     </div>
   </div>
 
-  <h2>Врачи и процедуры</h2>
-  {{if .Items}}
+  <h2>Доступные обследования</h2>
+  {{if .Groups}}
   <div class="grid">
-    {{range .Items}}
-    <a class="card" href="/item/{{.ID}}">
+    {{range .Groups}}
+    <a class="card" href="/clinic/{{$.Clinic.ID}}/exam/{{.Category}}">
       <div class="card-emoji">{{.Emoji}}</div>
       <div class="card-body">
-        <h3>{{.Name}}</h3>
-        <p class="muted">{{.Category}} · {{.Duration}} · ★ {{.Rating}}</p>
-        <p class="price">{{money .Price}}</p>
+        <h3>{{.Category}}</h3>
+        <p class="muted">{{.Count}} врача · от {{money .MinPrice}}</p>
+        <p class="rating-pill">★ {{printf "%.1f" .MaxRating}}</p>
       </div>
     </a>
     {{end}}

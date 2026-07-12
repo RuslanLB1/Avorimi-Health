@@ -1,13 +1,14 @@
 {{define "item.html"}}{{template "header" .}}
 
 <section class="container section item-page">
-  {{if .Clinic}}<a href="/clinic/{{.Clinic.ID}}" class="muted">← {{.Clinic.Name}}</a>{{end}}
+  {{if .Clinic}}<a href="/clinic/{{.Clinic.ID}}/exam/{{.Item.Category}}" class="muted">← {{.Item.Category}} в {{.Clinic.Name}}</a>{{end}}
 
   <div class="item-hero" style="margin-top:16px;">
     <div class="card-emoji big">{{.Item.Emoji}}</div>
     <div>
       <h1>{{.Item.Name}}</h1>
-      <p class="muted">{{.Item.Category}} · {{.Item.Duration}} · ★ {{.Item.Rating}}</p>
+      <p class="muted">{{.Item.Category}} · {{.Item.Duration}}</p>
+      <p class="rating-pill">★ {{printf "%.1f" .Item.Rating}}</p>
       {{if .Clinic}}<p class="muted">🏥 {{.Clinic.Name}} · {{.Clinic.Address}}</p>{{end}}
       <p>{{.Item.Description}}</p>
       <p class="price price-lg">{{money .Item.Price}}</p>

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ type Clinic struct {
 	Lng         float64
 	Emoji       string
 	Description string
+	Rating      float64
 }
 
 type Item struct {
@@ -142,50 +144,138 @@ func NewStore() *Store {
 	return s
 }
 
+// specialtyDef описывает одно направление (обследование/приём), которое разные
+// клиники могут предлагать через разных врачей с разной ценой и рейтингом.
+type specialtyDef struct {
+	Category string
+	Type     ItemType
+	Emoji    string
+	Base     int
+	Duration string
+}
+
+var specialtyPool = []specialtyDef{
+	{"Терапевт", TypeDoctor, "🩺", 8000, "30 мин"},
+	{"Кардиолог", TypeDoctor, "❤️", 12000, "40 мин"},
+	{"Дерматолог", TypeDoctor, "🧴", 10000, "30 мин"},
+	{"Невролог", TypeDoctor, "🧠", 11000, "40 мин"},
+	{"Стоматолог", TypeDoctor, "🦷", 9000, "40 мин"},
+	{"Уролог", TypeDoctor, "🩺", 10500, "30 мин"},
+	{"Гинеколог", TypeDoctor, "🩺", 11000, "30 мин"},
+	{"Педиатр", TypeDoctor, "🧸", 8500, "30 мин"},
+	{"Офтальмолог", TypeDoctor, "👁️", 9500, "30 мин"},
+	{"Отоларинголог (ЛОР)", TypeDoctor, "👂", 9000, "30 мин"},
+	{"Эндокринолог", TypeDoctor, "🩺", 11500, "30 мин"},
+	{"Гастроэнтеролог", TypeDoctor, "🩺", 11000, "30 мин"},
+	{"Аллерголог", TypeDoctor, "🤧", 9500, "30 мин"},
+	{"Психотерапевт", TypeDoctor, "🧘", 13000, "50 мин"},
+	{"Хирург", TypeDoctor, "🩹", 12500, "30 мин"},
+	{"Ортопед", TypeDoctor, "🦴", 11000, "30 мин"},
+	{"Флеболог", TypeDoctor, "🦵", 10500, "30 мин"},
+	{"Ревматолог", TypeDoctor, "🩺", 10500, "30 мин"},
+	{"Маммолог", TypeDoctor, "🩺", 11000, "30 мин"},
+	{"Диетолог", TypeDoctor, "🥗", 9000, "30 мин"},
+	{"УЗИ брюшной полости", TypeProcedure, "🩻", 9000, "20 мин"},
+	{"УЗИ малого таза", TypeProcedure, "🩻", 9500, "20 мин"},
+	{"ЭКГ с расшифровкой", TypeProcedure, "📈", 4500, "15 мин"},
+	{"Общий анализ крови", TypeProcedure, "🧪", 3500, "10 мин"},
+	{"Биохимический анализ крови", TypeProcedure, "🧪", 5500, "10 мин"},
+	{"Массаж спины", TypeProcedure, "💆", 7000, "45 мин"},
+	{"Рентген", TypeProcedure, "🩻", 6000, "15 мин"},
+	{"Флюорография", TypeProcedure, "🩻", 3000, "10 мин"},
+	{"Вакцинация", TypeProcedure, "💉", 4000, "15 мин"},
+}
+
+var clinicSeedNames = []string{
+	"Экомед на Абая", "Da Vinci Clinic", "Sova Clinic", "Family Health",
+	"Асыл Ана", "GMS Clinic Almaty", "МедЮнион", "Invitro Almaty",
+	"Клиника Vita", "Merey Med", "Almaty Health Center", "Салют Мед",
+	"Emir Med", "Shipager Clinic", "Best Health Clinic", "Медцентр Дару",
+	"Bereke Clinic", "Клиника Радуга", "Fortis Med", "Клиника Айболит",
+	"Nova Clinic", "Медцентр Жету", "Клиника Максимед", "City Clinic Almaty",
+	"Медицинский центр Достар",
+}
+
+var clinicSeedAddresses = []string{
+	"ул. Абая, 10", "мкр. Самал-2, 89", "ул. Розыбакиева, 247", "пр. Райымбека, 348",
+	"ул. Жандосова, 98", "ул. Наурызбай батыра, 44", "ул. Толе би, 187", "пр. Достык, 105",
+	"ул. Гоголя, 86", "ул. Сатпаева, 30а", "мкр. Коктем-3, 12", "ул. Тимирязева, 42",
+	"ул. Байтурсынова, 74", "пр. Аль-Фараби, 15", "ул. Жарокова, 240", "мкр. Аксай-3, 8",
+	"ул. Момышулы, 15", "ул. Сейфуллина, 520", "ул. Кабанбай батыра, 111", "мкр. Орбита-2, 5",
+	"ул. Утеген батыра, 76", "ул. Мынбаева, 43", "пр. Абылай хана, 63", "ул. Панфилова, 98",
+	"мкр. Мамыр-4, 21",
+}
+
+var clinicEmojis = []string{"🏥", "🏨", "🏩"}
+
+var doctorFirstNames = []string{
+	"Айгерим", "Марат", "Динара", "Ержан", "Сауле", "Нурлан", "Гульнара", "Асхат",
+	"Айдана", "Данияр", "Жанна", "Бекзат", "Индира", "Тимур", "Алия", "Санжар",
+	"Мадина", "Ерлан", "Камила", "Арман", "Дана", "Олжас", "Аружан", "Бауыржан",
+}
+
+var doctorLastNames = []string{
+	"Сатпаева", "Ким", "Абенова", "Беков", "Ищанова", "Жаксыбеков", "Оспанова", "Тулегенов",
+	"Смагулова", "Касымов", "Нурланова", "Оразов", "Байжанова", "Кенжебаев", "Абдразакова",
+	"Сейтказиева", "Тлеубергенов", "Ахметова", "Байбосынов", "Дюсенова", "Калиев", "Жумабекова",
+	"Сарсенов", "Утешева",
+}
+
 func (s *Store) seed() {
-	clinics := []*Clinic{
-		{ID: 1, Name: "Экомед на Абая", Address: "г. Алматы, ул. Абая, 10", Lat: 43.2380, Lng: 76.9010, Emoji: "🏥", Description: "Многопрофильная клиника в центре города."},
-		{ID: 2, Name: "Da Vinci Clinic", Address: "г. Алматы, мкр. Самал-2, 89", Lat: 43.2200, Lng: 76.9550, Emoji: "🏨", Description: "Частная клиника с узкими специалистами и диагностикой."},
-		{ID: 3, Name: "Sova Clinic", Address: "г. Алматы, ул. Розыбакиева, 247", Lat: 43.2050, Lng: 76.8900, Emoji: "🏩", Description: "Семейная клиника с удобной записью день в день."},
-		{ID: 4, Name: "Family Health", Address: "г. Алматы, пр. Райымбека, 348", Lat: 43.2630, Lng: 76.9450, Emoji: "🏥", Description: "Педиатрия, терапия и лабораторная диагностика."},
-		{ID: 5, Name: "Асыл Ана", Address: "г. Алматы, ул. Жандосова, 98", Lat: 43.1950, Lng: 76.8650, Emoji: "🏨", Description: "Женское здоровье и общая терапия."},
-		{ID: 6, Name: "GMS Clinic Almaty", Address: "г. Алматы, ул. Наурызбай батыра, 44", Lat: 43.2500, Lng: 76.9450, Emoji: "🏩", Description: "Современная многопрофильная клиника премиум-класса."},
-	}
-	for _, c := range clinics {
-		s.clinics[c.ID] = c
-	}
+	rng := rand.New(rand.NewSource(42))
 
-	items := []*Item{
-		{ID: 1, ClinicID: 1, Type: TypeDoctor, Name: "Айгерим Сатпаева", Category: "Терапевт", Price: 8000, Duration: "30 мин", Description: "Первичный приём, консультация, назначение обследований.", Emoji: "🩺", Rating: 4.9},
-		{ID: 2, ClinicID: 1, Type: TypeDoctor, Name: "Нурлан Жаксыбеков", Category: "Стоматолог", Price: 9000, Duration: "40 мин", Description: "Осмотр, консультация, лечение и профилактика кариеса.", Emoji: "🦷", Rating: 4.8},
-		{ID: 3, ClinicID: 1, Type: TypeProcedure, Name: "УЗИ брюшной полости", Category: "Диагностика", Price: 9000, Duration: "20 мин", Description: "Комплексное ультразвуковое обследование органов брюшной полости.", Emoji: "🩻", Rating: 4.8},
-
-		{ID: 4, ClinicID: 2, Type: TypeDoctor, Name: "Марат Ким", Category: "Кардиолог", Price: 12000, Duration: "40 мин", Description: "Консультация кардиолога, расшифровка ЭКГ.", Emoji: "❤️", Rating: 4.8},
-		{ID: 5, ClinicID: 2, Type: TypeDoctor, Name: "Асхат Тулегенов", Category: "Уролог", Price: 10500, Duration: "30 мин", Description: "Консультация уролога, УЗИ по показаниям.", Emoji: "🩺", Rating: 4.7},
-		{ID: 6, ClinicID: 2, Type: TypeProcedure, Name: "ЭКГ с расшифровкой", Category: "Диагностика", Price: 4500, Duration: "15 мин", Description: "Электрокардиограмма с заключением врача.", Emoji: "📈", Rating: 4.8},
-
-		{ID: 7, ClinicID: 3, Type: TypeDoctor, Name: "Динара Абенова", Category: "Дерматолог", Price: 10000, Duration: "30 мин", Description: "Диагностика кожи, консультация по высыпаниям и родинкам.", Emoji: "🧴", Rating: 4.7},
-		{ID: 8, ClinicID: 3, Type: TypeDoctor, Name: "Сауле Ищанова", Category: "Гинеколог", Price: 11000, Duration: "30 мин", Description: "Плановый осмотр и консультация гинеколога.", Emoji: "🩺", Rating: 4.9},
-		{ID: 9, ClinicID: 3, Type: TypeProcedure, Name: "Массаж спины", Category: "Физиотерапия", Price: 7000, Duration: "45 мин", Description: "Лечебный массаж спины и шейно-воротниковой зоны.", Emoji: "💆", Rating: 4.7},
-
-		{ID: 10, ClinicID: 4, Type: TypeDoctor, Name: "Ержан Беков", Category: "Невролог", Price: 11000, Duration: "40 мин", Description: "Приём невролога, консультация при головных болях и головокружении.", Emoji: "🧠", Rating: 4.9},
-		{ID: 11, ClinicID: 4, Type: TypeDoctor, Name: "Гульнара Оспанова", Category: "Педиатр", Price: 8500, Duration: "30 мин", Description: "Осмотр и консультация детского врача.", Emoji: "🧸", Rating: 4.9},
-		{ID: 12, ClinicID: 4, Type: TypeProcedure, Name: "Общий анализ крови", Category: "Анализы", Price: 3500, Duration: "10 мин", Description: "Забор крови и полный клинический анализ.", Emoji: "🧪", Rating: 4.9},
-
-		{ID: 13, ClinicID: 5, Type: TypeDoctor, Name: "Бекзат Оразов", Category: "Терапевт", Price: 7500, Duration: "30 мин", Description: "Первичная консультация терапевта.", Emoji: "🩺", Rating: 4.6},
-		{ID: 14, ClinicID: 5, Type: TypeDoctor, Name: "Айдана Смагулова", Category: "Стоматолог", Price: 8500, Duration: "40 мин", Description: "Лечение и профилактика заболеваний зубов и дёсен.", Emoji: "🦷", Rating: 4.7},
-
-		{ID: 15, ClinicID: 6, Type: TypeDoctor, Name: "Данияр Касымов", Category: "Уролог", Price: 13000, Duration: "30 мин", Description: "Консультация уролога в клинике премиум-класса.", Emoji: "🩺", Rating: 4.9},
-		{ID: 16, ClinicID: 6, Type: TypeProcedure, Name: "УЗИ малого таза", Category: "Диагностика", Price: 9500, Duration: "20 мин", Description: "Ультразвуковое исследование органов малого таза.", Emoji: "🩻", Rating: 4.8},
-	}
-	for _, it := range items {
-		s.items[it.ID] = it
+	for i, name := range clinicSeedNames {
+		id := i + 1
+		s.clinics[id] = &Clinic{
+			ID:          id,
+			Name:        name,
+			Address:     "г. Алматы, " + clinicSeedAddresses[i],
+			Lat:         43.15 + rng.Float64()*0.15,
+			Lng:         76.83 + rng.Float64()*0.15,
+			Emoji:       clinicEmojis[i%len(clinicEmojis)],
+			Rating:      math.Round((4.2+rng.Float64()*0.7)*10) / 10,
+			Description: "Многопрофильная клиника-партнёр Avorimi Health.",
+		}
 	}
 
-	// Генерируем слоты на ближайшие 5 дней для каждого специалиста/процедуры.
+	itemID := 1
+	for clinicID := 1; clinicID <= len(clinicSeedNames); clinicID++ {
+		perm := rng.Perm(len(specialtyPool))
+		numSpecialties := 5 + rng.Intn(4) // 5..8 направлений на клинику
+		for si := 0; si < numSpecialties; si++ {
+			spec := specialtyPool[perm[si]]
+			numDoctors := 3 + rng.Intn(2) // 3..4 врача на направление
+			for d := 0; d < numDoctors; d++ {
+				name := doctorFirstNames[rng.Intn(len(doctorFirstNames))] + " " + doctorLastNames[rng.Intn(len(doctorLastNames))]
+				price := spec.Base + (rng.Intn(7)-2)*500
+				if price < 1000 {
+					price = spec.Base
+				}
+				desc := spec.Category + " — приём и консультация специалиста."
+				if spec.Type == TypeProcedure {
+					desc = spec.Category + " — быстро, без очередей, с выдачей результата."
+				}
+				s.items[itemID] = &Item{
+					ID:          itemID,
+					ClinicID:    clinicID,
+					Type:        spec.Type,
+					Name:        name,
+					Category:    spec.Category,
+					Price:       price,
+					Duration:    spec.Duration,
+					Description: desc,
+					Emoji:       spec.Emoji,
+					Rating:      math.Round((4.3+rng.Float64()*0.7)*10) / 10,
+				}
+				itemID++
+			}
+		}
+	}
+
+	// Генерируем слоты на ближайшие 5 дней для каждого врача/процедуры.
 	hours := []int{9, 10, 11, 13, 14, 15, 16, 17}
 	now := time.Now()
-	for _, it := range items {
+	for _, it := range s.items {
 		for d := 0; d < 5; d++ {
 			day := now.AddDate(0, 0, d)
 			for _, h := range hours {
@@ -240,6 +330,62 @@ func (s *Store) ItemsByClinic(clinicID int) []*Item {
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+// CategoryGroup — одно обследование/направление в клинике со сводкой по врачам.
+type CategoryGroup struct {
+	Category  string
+	Emoji     string
+	Type      ItemType
+	Count     int
+	MinPrice  int
+	MaxRating float64
+}
+
+// CategoriesByClinic группирует врачей/процедуры клиники по направлению —
+// именно такой список видит пациент, зайдя в карточку клиники.
+func (s *Store) CategoriesByClinic(clinicID int) []CategoryGroup {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	groups := map[string]*CategoryGroup{}
+	for _, it := range s.items {
+		if it.ClinicID != clinicID {
+			continue
+		}
+		g, ok := groups[it.Category]
+		if !ok {
+			g = &CategoryGroup{Category: it.Category, Emoji: it.Emoji, Type: it.Type, MinPrice: it.Price}
+			groups[it.Category] = g
+		}
+		g.Count++
+		if it.Price < g.MinPrice {
+			g.MinPrice = it.Price
+		}
+		if it.Rating > g.MaxRating {
+			g.MaxRating = it.Rating
+		}
+	}
+	out := make([]CategoryGroup, 0, len(groups))
+	for _, g := range groups {
+		out = append(out, *g)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Category < out[j].Category })
+	return out
+}
+
+// ItemsByClinicCategory — конкретные врачи (3-4 варианта) по направлению в клинике,
+// отсортированные по рейтингу.
+func (s *Store) ItemsByClinicCategory(clinicID int, category string) []*Item {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]*Item, 0)
+	for _, it := range s.items {
+		if it.ClinicID == clinicID && it.Category == category {
+			out = append(out, it)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Rating > out[j].Rating })
 	return out
 }
 
