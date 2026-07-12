@@ -26,7 +26,10 @@
         </select>
         {{if .CurrentUser}}
         <button class="profile-btn" onclick="toggleProfile()" type="button">
-          <span class="avatar">{{initial .CurrentUser.FullName}}</span>
+          <span class="avatar-wrap">
+            <span class="avatar">{{initial .CurrentUser.FullName}}</span>
+            {{if .ReadyLabResults}}<span class="notif-dot"></span>{{end}}
+          </span>
           <span class="profile-btn-name">{{.CurrentUser.FullName}}</span>
         </button>
         {{else}}
@@ -64,9 +67,19 @@
       {{end}}
     </div>
 
+    {{if .ReadyLabResults}}
+    <div class="profile-section">
+      <h4>Уведомления</h4>
+      {{range .ReadyLabResults}}
+      <p class="notif-line">🧪 {{.Item.Category}} — результат готов</p>
+      {{end}}
+    </div>
+    {{end}}
+
     <div class="profile-section">
       <h4>Аккаунт</h4>
       <a href="/account" class="profile-link">📋 Мои записи</a>
+      <a href="/results" class="profile-link">🧪 Мои анализы</a>
       <a href="/subscriptions" class="profile-link">♾️ Тарифы подписки</a>
       <a href="/clinics" class="profile-link">📍 Клиники рядом</a>
     </div>

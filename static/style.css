@@ -94,6 +94,37 @@ a { color: inherit; text-decoration: none; }
 }
 .avatar-lg { width: 52px; height: 52px; font-size: 20px; }
 
+.avatar-wrap { position: relative; display: inline-flex; }
+.notif-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--danger);
+  border: 2px solid var(--card);
+  border-radius: 50%;
+}
+.notif-line {
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+}
+.notif-line:last-child { border-bottom: none; }
+
+.status-pill {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin: 6px 0 4px;
+}
+.status-ready { background: #e6f7ee; color: #1a9c56; }
+.status-pending { background: #fff4e0; color: #b3690a; }
+
 .profile-overlay {
   position: fixed;
   inset: 0;

@@ -1,0 +1,32 @@
+{{define "results.html"}}{{template "header" .}}
+
+<section class="container section narrow">
+  <h1>Мои анализы</h1>
+  <p class="muted">Результаты УЗИ, анализов крови, ЭКГ и других обследований сохраняются здесь.
+  Как только результат готов, мы показываем уведомление в профиле.</p>
+
+  {{if .Results}}
+  <div class="bookings-list">
+    {{range .Results}}
+    <div class="summary-box left">
+      <div class="card-emoji">{{.Item.Emoji}}</div>
+      <div>
+        <h3>{{.Item.Name}}</h3>
+        <p class="muted">{{.Item.Category}} · {{when .Slot.When}}</p>
+        {{if .Ready}}
+        <p class="status-pill status-ready">✅ Готово</p>
+        <p class="muted">{{.Result}}</p>
+        {{else}}
+        <p class="status-pill status-pending">⏳ Ожидается</p>
+        <p class="muted">Результат появится здесь после обработки.</p>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <p class="muted">Пока нет записей на анализы или диагностику. Найдите нужное обследование в <a href="/catalog">каталоге</a>.</p>
+  {{end}}
+</section>
+
+{{template "footer" .}}{{end}}

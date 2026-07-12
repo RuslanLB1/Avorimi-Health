@@ -80,6 +80,7 @@ func main() {
 	mux.HandleFunc("POST /subscribe/{planID}", requireAuth(confirmSubscriptionHandler))
 
 	mux.HandleFunc("GET /account", requireAuth(accountHandler))
+	mux.HandleFunc("GET /results", requireAuth(resultsHandler))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -105,6 +106,13 @@ func render(w http.ResponseWriter, r *http.Request, name string, data map[string
 			data["ActiveSub"] = sub
 			data["ActiveSubPlan"] = plan
 		}
+		var ready []LabResultView
+		for _, lr := range labResultsForUser(user.ID) {
+			if lr.Ready {
+				ready = append(ready, lr)
+			}
+		}
+		data["ReadyLabResults"] = ready
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {

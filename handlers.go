@@ -10,7 +10,56 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// labResultTexts перечисляет направления-обследования, по которым пациенту положен
+// результат анализа/диагностики (в отличие от обычного приёма врача или процедуры вроде массажа).
+var labResultTexts = map[string]string{
+	"Общий анализ крови":         "Показатели крови в пределах нормы.",
+	"Биохимический анализ крови": "Показатели крови в пределах нормы.",
+	"УЗИ брюшной полости":        "Патологических изменений не выявлено.",
+	"УЗИ малого таза":            "Патологических изменений не выявлено.",
+	"ЭКГ с расшифровкой":         "Ритм синусовый, без отклонений.",
+	"Рентген":                    "Без признаков патологии.",
+	"Флюорография":               "Без признаков патологии.",
+}
+
+// labResultReadyAfter — демо-время "обработки" анализа с момента записи, чтобы результат
+// можно было увидеть готовым в рамках одной демонстрации, а не через реальные дни.
+const labResultReadyAfter = 90 * time.Second
+
+// LabResultView — запись на анализ/диагностику вместе со статусом готовности результата.
+type LabResultView struct {
+	Booking *Booking
+	Item    *Item
+	Slot    *Slot
+	Ready   bool
+	Result  string
+}
+
+func labResultsForUser(userID int) []LabResultView {
+	bookings := store.BookingsByUser(userID)
+	out := make([]LabResultView, 0)
+	for _, b := range bookings {
+		item, ok := store.GetItem(b.ItemID)
+		if !ok {
+			continue
+		}
+		resultText, isLab := labResultTexts[item.Category]
+		if !isLab {
+			continue
+		}
+		slot, _ := store.GetSlot(b.SlotID)
+		v := LabResultView{Booking: b, Item: item, Slot: slot}
+		if time.Since(b.CreatedAt) > labResultReadyAfter {
+			v.Ready = true
+			v.Result = resultText
+		}
+		out = append(out, v)
+	}
+	return out
+}
 
 // BookingView объединяет запись, услугу и слот для удобного отображения в шаблонах.
 type BookingView struct {
@@ -572,5 +621,11 @@ func accountHandler(w http.ResponseWriter, r *http.Request, user *User) {
 
 	render(w, r, "account.html", map[string]any{
 		"Bookings": views,
+	})
+}
+
+func resultsHandler(w http.ResponseWriter, r *http.Request, user *User) {
+	render(w, r, "results.html", map[string]any{
+		"Results": labResultsForUser(user.ID),
 	})
 }
