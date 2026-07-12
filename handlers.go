@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -17,9 +19,75 @@ type BookingView struct {
 	Slot    *Slot
 }
 
+// PopularDoctor — карточка специалиста для блока "Популярные специалисты" на главной.
+type PopularDoctor struct {
+	Item       *Item
+	ClinicName string
+	NextSlot   *Slot
+}
+
+// clinicPin — минимальные данные клиники для отрисовки метки на карте (JSON для JS).
+type clinicPin struct {
+	ID      int     `json:"id"`
+	Name    string  `json:"name"`
+	Address string  `json:"address"`
+	Lat     float64 `json:"lat"`
+	Lng     float64 `json:"lng"`
+	Rating  float64 `json:"rating"`
+}
+
 func homeHandler(w http.ResponseWriter, r *http.Request) {
+	clinics := store.AllClinics()
+	items := store.AllItems()
+
+	var doctorItems []*Item
+	for _, it := range items {
+		if it.Type == TypeDoctor {
+			doctorItems = append(doctorItems, it)
+		}
+	}
+	totalDoctors := len(doctorItems)
+
+	sort.Slice(doctorItems, func(i, j int) bool { return doctorItems[i].Rating > doctorItems[j].Rating })
+	if len(doctorItems) > 6 {
+		doctorItems = doctorItems[:6]
+	}
+	popular := make([]PopularDoctor, 0, len(doctorItems))
+	for _, it := range doctorItems {
+		clinicName := ""
+		if c, ok := store.GetClinic(it.ClinicID); ok {
+			clinicName = c.Name
+		}
+		var next *Slot
+		if slots := store.SlotsForItem(it.ID); len(slots) > 0 {
+			next = slots[0]
+		}
+		popular = append(popular, PopularDoctor{Item: it, ClinicName: clinicName, NextSlot: next})
+	}
+
+	var ratingSum float64
+	for _, c := range clinics {
+		ratingSum += c.Rating
+	}
+	avgRating := 0.0
+	if len(clinics) > 0 {
+		avgRating = ratingSum / float64(len(clinics))
+	}
+
+	pins := make([]clinicPin, 0, len(clinics))
+	for _, c := range clinics {
+		pins = append(pins, clinicPin{ID: c.ID, Name: c.Name, Address: c.Address, Lat: c.Lat, Lng: c.Lng, Rating: c.Rating})
+	}
+	pinsJSON, _ := json.Marshal(pins)
+
 	render(w, r, "home.html", map[string]any{
-		"Plans": store.AllPlans(),
+		"Plans":          store.AllPlans(),
+		"ClinicsCount":   len(clinics),
+		"DoctorsCount":   totalDoctors,
+		"BookingsCount":  store.BookingsCount(),
+		"AvgRating":      avgRating,
+		"PopularDoctors": popular,
+		"ClinicsJSON":    template.JS(pinsJSON),
 	})
 }
 

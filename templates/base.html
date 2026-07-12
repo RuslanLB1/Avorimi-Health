@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Avorimi Health — запись к врачу онлайн</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
   <header class="site-header">
@@ -18,6 +19,11 @@
         {{if .CurrentUser}}<a href="/account">Мои записи</a>{{end}}
       </nav>
       <div class="header-actions">
+        <select class="lang-switch" onchange="handleLangSwitch(this)">
+          <option value="ru">🇷🇺 RU</option>
+          <option value="kz">🇰🇿 KZ</option>
+          <option value="en">🇬🇧 EN</option>
+        </select>
         {{if .CurrentUser}}
         <button class="profile-btn" onclick="toggleProfile()" type="button">
           <span class="avatar">{{initial .CurrentUser.FullName}}</span>
@@ -77,14 +83,57 @@
 {{define "footer"}}
   </main>
   <footer class="site-footer">
-    <div class="container">
-      <p>Avorimi Health — демо-прототип платформы онлайн-записи к врачам и на процедуры.</p>
+    <div class="container footer-grid">
+      <div class="footer-col">
+        <h4>Контакты</h4>
+        <p>📞 Поддержка<br><a href="tel:+77080908161">+7 708 090 81 61</a></p>
+        <p>✉ Email<br><a href="mailto:avorimihealth@gmail.com">avorimihealth@gmail.com</a></p>
+        <p>🕘 Поддержка<br>Круглосуточно (24/7)</p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Социальные сети</h4>
+        <p class="muted">Следите за Avorimi</p>
+        <p><a href="https://instagram.com/avorimi_hearts" target="_blank" rel="noopener">📷 Instagram — @avorimi_hearts</a></p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Экосистема Avorimi</h4>
+        <p>❤️ <strong>Avorimi Health</strong><br><span class="muted">Поиск клиник, запись к врачам и медицинские подписки.</span></p>
+        <p>🤝 <strong>Avorimi Hearts</strong> <span class="soon-badge">Скоро</span><br><span class="muted">Благотворительный фонд.</span></p>
+        <p>🌸 <strong>Avorimi Floral</strong> <span class="soon-badge">Скоро</span><br><span class="muted">Доставка цветов и подарков.</span></p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Навигация</h4>
+        <a href="/">О сервисе</a>
+        <a href="/#faq">Частые вопросы</a>
+        <a href="mailto:avorimihealth@gmail.com">Контакты</a>
+        <div class="lang-switch-row">
+          <select class="lang-switch" onchange="handleLangSwitch(this)">
+            <option value="ru">🇷🇺 Русский</option>
+            <option value="kz">🇰🇿 Қазақша</option>
+            <option value="en">🇬🇧 English</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>© 2026 Avorimi. Все права защищены. Создано с ❤️ в Казахстане. Версия 1.0</p>
     </div>
   </footer>
   <script>
     function toggleProfile() {
       document.getElementById('profilePanel').classList.toggle('open');
       document.getElementById('profileOverlay').classList.toggle('open');
+    }
+    function handleLangSwitch(select) {
+      if (select.value !== 'ru') {
+        var original = select.value;
+        select.title = 'Скоро доступно';
+        setTimeout(function () { select.value = 'ru'; }, 400);
+      }
     }
   </script>
 </body>

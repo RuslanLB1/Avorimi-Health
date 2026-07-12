@@ -598,6 +598,13 @@ func (s *Store) MarkPaid(bookingID int) error {
 	return nil
 }
 
+// BookingsCount — общее число записей (для статистики на главной).
+func (s *Store) BookingsCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.bookings)
+}
+
 // BookingsByUser для личного кабинета.
 func (s *Store) BookingsByUser(userID int) []*Booking {
 	s.mu.Lock()

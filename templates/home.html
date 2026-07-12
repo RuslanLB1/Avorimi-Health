@@ -4,19 +4,153 @@
   <div class="container hero-inner">
     <div class="hero-text">
       <h1>Найдите клинику<br>рядом и запишитесь<br><span>здесь и сейчас</span></h1>
-      <p>Avorimi Health — мост между вами и клиниками города. Показываем клиники рядом с вами,
-      вы выбираете нужного специалиста и удобное время, оплачиваете приём онлайн.
-      Без звонков и ожидания на линии.</p>
+      <p>Avorimi Health — современная платформа для поиска клиник, записи к врачам
+      и оформления медицинских подписок.</p>
       <div class="hero-actions">
         <a href="/clinics" class="btn btn-primary">📍 Найти клинику рядом</a>
-        <a href="/subscriptions" class="btn btn-outline">Смотреть подписки</a>
+        <a href="/subscriptions" class="btn btn-outline">Посмотреть подписки</a>
       </div>
     </div>
     <div class="hero-card">
-      <div class="hero-card-row"><span>📍</span> Геолокация — клиники рядом с вами</div>
+      <div class="hero-card-row"><span>📍</span> Клиники рядом с вами</div>
       <div class="hero-card-row"><span>🏥</span> Выбор клиники и специалиста</div>
       <div class="hero-card-row"><span>🗓️</span> Ближайшее свободное время</div>
       <div class="hero-card-row"><span>💳</span> Оплата картой онлайн</div>
+      <div class="hero-card-row"><span>⭐</span> Проверенные клиники</div>
+    </div>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-head center-head">
+    <h2>Запишитесь к врачу всего за несколько минут</h2>
+    <p class="muted">Без звонков, очередей и долгого ожидания.</p>
+  </div>
+  <div class="flow-row">
+    <div class="flow-card">
+      <div class="flow-icon">📍</div>
+      <h3>Найдите клинику</h3>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-card">
+      <div class="flow-icon">👨‍⚕️</div>
+      <h3>Выберите специалиста</h3>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-card">
+      <div class="flow-icon">📅</div>
+      <h3>Выберите время</h3>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-card">
+      <div class="flow-icon">💳</div>
+      <h3>Оплатите онлайн</h3>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-card">
+      <div class="flow-icon">✅</div>
+      <h3>Посетите приём</h3>
+    </div>
+  </div>
+  <div class="center" style="margin-top:28px;">
+    <a href="/clinics" class="btn btn-primary">Попробовать сейчас</a>
+  </div>
+</section>
+
+<section class="container section why-us">
+  <div class="section-head center-head">
+    <h2>Почему выбирают Avorimi</h2>
+  </div>
+  <div class="grid grid-3">
+    <div class="why-card"><div class="why-icon">⚡</div><h3>Запись за 2 минуты</h3></div>
+    <div class="why-card"><div class="why-icon">🏥</div><h3>Проверенные клиники</h3></div>
+    <div class="why-card"><div class="why-icon">💳</div><h3>Онлайн-оплата</h3></div>
+    <div class="why-card"><div class="why-icon">📱</div><h3>Все записи в одном месте</h3></div>
+    <div class="why-card"><div class="why-icon">🔒</div><h3>Защита персональных данных</h3></div>
+    <div class="why-card"><div class="why-icon">❤️</div><h3>Экономия благодаря подпискам</h3></div>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-head">
+    <h2>Популярные медицинские направления</h2>
+    <a href="/catalog">Все направления →</a>
+  </div>
+  <div class="grid specialty-grid">
+    <a class="specialty-card" href="/catalog?category=Терапевт">🩺<span>Терапевт</span></a>
+    <a class="specialty-card" href="/catalog?category=Стоматолог">🦷<span>Стоматолог</span></a>
+    <a class="specialty-card" href="/catalog?category=Кардиолог">❤️<span>Кардиолог</span></a>
+    <a class="specialty-card" href="/catalog?category=Педиатр">👶<span>Педиатр</span></a>
+    <a class="specialty-card" href="/catalog?category=Гинеколог">👩<span>Гинеколог</span></a>
+    <a class="specialty-card" href="/catalog?category=Офтальмолог">👁️<span>Офтальмолог</span></a>
+    <a class="specialty-card" href="/catalog?category=Невролог">🧠<span>Невролог</span></a>
+    <a class="specialty-card" href="/catalog?category=Ортопед">🦴<span>Ортопед</span></a>
+  </div>
+</section>
+
+<section class="container section" id="clinics-map">
+  <div class="section-head center-head">
+    <h2>Найдите клинику рядом с вами</h2>
+  </div>
+  <div id="map" class="clinics-map"></div>
+  <div class="map-points">
+    <span>✔ {{.ClinicsCount}} клиник поблизости</span>
+    <span>✔ {{.DoctorsCount}} докторов и специалистов</span>
+    <span>✔ Сотни свободных окон каждый день</span>
+  </div>
+  <div class="center" style="margin-top:20px;">
+    <a href="/clinics" class="btn btn-primary">Открыть карту</a>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-head">
+    <h2>Популярные специалисты</h2>
+  </div>
+  <div class="grid grid-3">
+    {{range .PopularDoctors}}
+    <div class="card doctor-card">
+      <span class="avatar avatar-lg">{{initial .Item.Name}}</span>
+      <div class="card-body">
+        <h3>{{.Item.Name}}</h3>
+        <p class="muted">{{.Item.Category}} · {{.ClinicName}}</p>
+        <p class="rating-pill">★ {{printf "%.1f" .Item.Rating}}</p>
+        <p class="muted">{{if .NextSlot}}Ближайшая запись: {{when .NextSlot.When}}{{else}}Уточняйте время{{end}}</p>
+        <a href="/item/{{.Item.ID}}" class="btn btn-primary btn-sm">Записаться</a>
+      </div>
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<section class="container section stats-section">
+  <div class="grid grid-4">
+    <div class="stat-card"><div class="stat-num">{{.ClinicsCount}}+</div><div class="muted">клиник</div></div>
+    <div class="stat-card"><div class="stat-num">{{.DoctorsCount}}+</div><div class="muted">специалистов</div></div>
+    <div class="stat-card"><div class="stat-num">{{.BookingsCount}}</div><div class="muted">записей</div></div>
+    <div class="stat-card"><div class="stat-num">{{printf "%.1f" .AvgRating}}★</div><div class="muted">средняя оценка</div></div>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-head center-head">
+    <h2>Отзывы пользователей</h2>
+  </div>
+  <div class="grid grid-3">
+    <div class="card review-card">
+      <p class="rating-pill">★★★★★</p>
+      <p>«Очень быстро записалась к врачу.»</p>
+      <p class="muted">— Алия</p>
+    </div>
+    <div class="card review-card">
+      <p class="rating-pill">★★★★★</p>
+      <p>«Лучший сервис записи в клиники.»</p>
+      <p class="muted">— Руслан</p>
+    </div>
+    <div class="card review-card">
+      <p class="rating-pill">★★★★★</p>
+      <p>«Теперь не приходится звонить.»</p>
+      <p class="muted">— Максим</p>
     </div>
   </div>
 </section>
@@ -26,6 +160,8 @@
     <h2>Подписки на визиты</h2>
     <a href="/subscriptions">Все планы →</a>
   </div>
+  <p class="muted">Выберите подписку, которая подходит именно вам. Подписка помогает экономить
+  на медицинских услугах и получать быстрый доступ к специалистам.</p>
   <div class="grid grid-3">
     {{range .Plans}}
     <div class="plan-card {{if .Highlight}}plan-highlight{{end}}">
@@ -37,5 +173,45 @@
     {{end}}
   </div>
 </section>
+
+<section class="container section">
+  <div class="section-head center-head">
+    <h2>Частые вопросы</h2>
+  </div>
+  <div class="faq-list">
+    <details class="faq-item"><summary>Как работает подписка?</summary><p class="muted">Вы оплачиваете тариф раз в месяц и получаете определённое число бесплатных визитов к врачам или на процедуры — записываетесь как обычно и отмечаете оплату подпиской.</p></details>
+    <details class="faq-item"><summary>Можно ли вернуть деньги?</summary><p class="muted">Да, если визит не состоялся не по вашей вине — напишите в поддержку, и мы разберёмся индивидуально.</p></details>
+    <details class="faq-item"><summary>Как записаться?</summary><p class="muted">Найдите клинику рядом, выберите направление и врача, затем удобное время — запись подтверждается сразу.</p></details>
+    <details class="faq-item"><summary>Как отменить запись?</summary><p class="muted">В разделе «Мои записи» можно посмотреть все свои визиты; для отмены обратитесь в поддержку — скоро это можно будет сделать в один клик.</p></details>
+    <details class="faq-item"><summary>Какие клиники подключены?</summary><p class="muted">Мы сотрудничаем с проверенными многопрофильными клиниками вашего города — полный список смотрите в разделе «Клиники рядом».</p></details>
+    <details class="faq-item"><summary>Что входит в тариф?</summary><p class="muted">Каждый тариф даёт определённое число бесплатных визитов в месяц к любым врачам или на процедуры из каталога.</p></details>
+    <details class="faq-item"><summary>Как изменить подписку?</summary><p class="muted">Оформите новый тариф в разделе «Подписки» — он заменит текущий при следующей оплате.</p></details>
+  </div>
+</section>
+
+<section class="container section final-cta">
+  <h2>Заботьтесь о здоровье вместе с Avorimi</h2>
+  <p>Выберите клинику, найдите врача и запишитесь онлайн уже сегодня.</p>
+  <a href="/clinics" class="btn btn-primary">📍 Найти клинику</a>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  var clinics = {{.ClinicsJSON}};
+  var mapEl = document.getElementById('map');
+  if (!mapEl || !window.L || !clinics.length) return;
+  var map = L.map('map').setView([clinics[0].lat, clinics[0].lng], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
+    maxZoom: 18
+  }).addTo(map);
+  clinics.forEach(function (c) {
+    L.marker([c.lat, c.lng]).addTo(map)
+      .bindPopup('<strong>' + c.name + '</strong><br>' + c.address + '<br>★ ' + c.rating.toFixed(1) +
+        '<br><a href="/clinic/' + c.id + '">Открыть клинику</a>');
+  });
+})();
+</script>
 
 {{template "footer" .}}{{end}}
