@@ -1,35 +1,35 @@
 {{define "pay.html"}}{{template "header" .}}
 
 <section class="container section narrow">
-  <h1>Оплата приёма</h1>
+  <h1>{{t .Lang "pay.title"}}</h1>
 
   <div class="summary-box">
     <div class="card-emoji">{{.Item.Emoji}}</div>
     <div>
       <h3>{{.Item.Name}}</h3>
-      <p class="muted">Запись №{{.Booking.ID}} · {{.CurrentUser.FullName}}</p>
+      <p class="muted">{{t .Lang "pay.recordNum"}}{{.Booking.ID}} · {{.CurrentUser.FullName}}</p>
     </div>
   </div>
 
   <div class="pay-amount">
-    <span>Сумма к оплате</span>
+    <span>{{t .Lang "pay.amountDue"}}</span>
     <strong>{{money .Booking.Price}}</strong>
   </div>
 
   <form method="post" action="/pay/{{.Booking.ID}}" class="form">
-    <label>Номер карты
+    <label>{{t .Lang "pay.cardNumber"}}
       <input type="text" value="4400 4300 0000 0000" disabled>
     </label>
     <div class="form-row">
-      <label>Срок действия
+      <label>{{t .Lang "pay.expiry"}}
         <input type="text" value="12/29" disabled>
       </label>
       <label>CVC
         <input type="text" value="123" disabled>
       </label>
     </div>
-    <p class="muted small">Это демонстрационная оплата — реальное списание средств не производится.</p>
-    <button type="submit" class="btn btn-primary btn-block">Оплатить {{money .Booking.Price}}</button>
+    <p class="muted small">{{t .Lang "pay.demoNotice"}}</p>
+    <button type="submit" class="btn btn-primary btn-block">{{t .Lang "pay.payButton"}} {{money .Booking.Price}}</button>
   </form>
 </section>
 

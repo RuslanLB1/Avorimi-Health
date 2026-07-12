@@ -1,28 +1,28 @@
 {{define "book.html"}}{{template "header" .}}
 
 <section class="container section narrow">
-  <h1>Оформление записи</h1>
+  <h1>{{t .Lang "book.title"}}</h1>
   <div class="summary-box">
     <div class="card-emoji">{{.Item.Emoji}}</div>
     <div>
       <h3>{{.Item.Name}}</h3>
-      <p class="muted">{{.Item.Category}} · {{when .Slot.When}}</p>
+      <p class="muted">{{specialty .Lang .Item.Category}} · {{when .Lang .Slot.When}}</p>
       <p class="price">{{money .Item.Price}}</p>
     </div>
   </div>
 
-  <p class="muted">Запись оформляется на {{.CurrentUser.FullName}} · {{.CurrentUser.Phone}}</p>
+  <p class="muted">{{t .Lang "book.bookingFor"}} {{.CurrentUser.FullName}} · {{.CurrentUser.Phone}}</p>
 
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Error}}<p class="error">{{t .Lang .Error}}</p>{{end}}
 
   <form method="post" action="/book/{{.Slot.ID}}" class="form">
     {{if .HasSub}}
     <label class="checkbox-row">
       <input type="checkbox" name="use_subscription" checked>
-      У меня есть подписка — использовать бесплатный визит
+      {{t .Lang "book.useSub"}}
     </label>
     {{end}}
-    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+    <button type="submit" class="btn btn-primary btn-block">{{t .Lang "book.continue"}}</button>
   </form>
 </section>
 

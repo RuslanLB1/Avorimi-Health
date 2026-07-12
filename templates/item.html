@@ -1,13 +1,13 @@
 {{define "item.html"}}{{template "header" .}}
 
 <section class="container section item-page">
-  {{if .Clinic}}<a href="/clinic/{{.Clinic.ID}}/exam/{{.Item.Category}}" class="muted">← {{.Item.Category}} в {{.Clinic.Name}}</a>{{end}}
+  {{if .Clinic}}<a href="/clinic/{{.Clinic.ID}}/exam/{{.Item.Category}}" class="muted">← {{specialty .Lang .Item.Category}} {{t .Lang "item.in"}} {{.Clinic.Name}}</a>{{end}}
 
   <div class="item-hero" style="margin-top:16px;">
     <div class="card-emoji big">{{.Item.Emoji}}</div>
     <div>
       <h1>{{.Item.Name}}</h1>
-      <p class="muted">{{.Item.Category}} · {{.Item.Duration}}</p>
+      <p class="muted">{{specialty .Lang .Item.Category}} · {{duration .Lang .Item.Duration}}</p>
       <p class="rating-pill">★ {{printf "%.1f" .Item.Rating}}</p>
       {{if .Clinic}}<p class="muted">🏥 {{.Clinic.Name}} · {{.Clinic.Address}}</p>{{end}}
       <p>{{.Item.Description}}</p>
@@ -15,15 +15,15 @@
     </div>
   </div>
 
-  <h2>Свободное время</h2>
+  <h2>{{t .Lang "item.freeTime"}}</h2>
   {{if .Slots}}
   <div class="slots-grid">
     {{range .Slots}}
-    <a class="slot" href="/book/{{.ID}}">{{when .When}}</a>
+    <a class="slot" href="/book/{{.ID}}">{{when $.Lang .When}}</a>
     {{end}}
   </div>
   {{else}}
-  <p class="muted">Свободных слотов пока нет, загляните позже.</p>
+  <p class="muted">{{t .Lang "item.noSlots"}}</p>
   {{end}}
 </section>
 

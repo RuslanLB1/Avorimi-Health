@@ -1,9 +1,8 @@
 {{define "results.html"}}{{template "header" .}}
 
 <section class="container section narrow">
-  <h1>Мои анализы</h1>
-  <p class="muted">Результаты УЗИ, анализов крови, ЭКГ и других обследований сохраняются здесь.
-  Как только результат готов, мы показываем уведомление в профиле.</p>
+  <h1>{{t .Lang "results.title"}}</h1>
+  <p class="muted">{{t .Lang "results.intro"}}</p>
 
   {{if .Results}}
   <div class="bookings-list">
@@ -12,20 +11,20 @@
       <div class="card-emoji">{{.Item.Emoji}}</div>
       <div>
         <h3>{{.Item.Name}}</h3>
-        <p class="muted">{{.Item.Category}} · {{when .Slot.When}}</p>
+        <p class="muted">{{specialty $.Lang .Item.Category}} · {{when $.Lang .Slot.When}}</p>
         {{if .Ready}}
-        <p class="status-pill status-ready">✅ Готово</p>
-        <p class="muted">{{.Result}}</p>
+        <p class="status-pill status-ready">{{t $.Lang "results.ready"}}</p>
+        <p class="muted">{{labResult $.Lang .Item.Category}}</p>
         {{else}}
-        <p class="status-pill status-pending">⏳ Ожидается</p>
-        <p class="muted">Результат появится здесь после обработки.</p>
+        <p class="status-pill status-pending">{{t $.Lang "results.pending"}}</p>
+        <p class="muted">{{t $.Lang "results.pendingNote"}}</p>
         {{end}}
       </div>
     </div>
     {{end}}
   </div>
   {{else}}
-  <p class="muted">Пока нет записей на анализы или диагностику. Найдите нужное обследование в <a href="/catalog">каталоге</a>.</p>
+  <p class="muted">{{t .Lang "results.empty"}} <a href="/catalog">{{t .Lang "results.catalog"}}</a>.</p>
   {{end}}
 </section>
 

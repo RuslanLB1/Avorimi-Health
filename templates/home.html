@@ -3,114 +3,113 @@
 <section class="hero">
   <div class="container hero-inner">
     <div class="hero-text">
-      <h1>Найдите клинику<br>рядом и запишитесь<br><span>здесь и сейчас</span></h1>
-      <p>Avorimi Health — современная платформа для поиска клиник, записи к врачам
-      и оформления медицинских подписок.</p>
+      <h1>{{t .Lang "home.hero.title1"}}<br>{{t .Lang "home.hero.title2"}}<br><span>{{t .Lang "home.hero.title3"}}</span></h1>
+      <p>{{t .Lang "home.hero.subtitle"}}</p>
       <div class="hero-actions">
-        <a href="/clinics" class="btn btn-primary">📍 Найти клинику рядом</a>
-        <a href="/subscriptions" class="btn btn-outline">Посмотреть подписки</a>
+        <a href="/clinics" class="btn btn-primary">{{t .Lang "home.hero.cta1"}}</a>
+        <a href="/subscriptions" class="btn btn-outline">{{t .Lang "home.hero.cta2"}}</a>
       </div>
     </div>
     <div class="hero-card">
-      <div class="hero-card-row"><span>📍</span> Клиники рядом с вами</div>
-      <div class="hero-card-row"><span>🏥</span> Выбор клиники и специалиста</div>
-      <div class="hero-card-row"><span>🗓️</span> Ближайшее свободное время</div>
-      <div class="hero-card-row"><span>💳</span> Оплата картой онлайн</div>
-      <div class="hero-card-row"><span>⭐</span> Проверенные клиники</div>
+      <div class="hero-card-row"><span>📍</span> {{t .Lang "home.hero.card1"}}</div>
+      <div class="hero-card-row"><span>🏥</span> {{t .Lang "home.hero.card2"}}</div>
+      <div class="hero-card-row"><span>🗓️</span> {{t .Lang "home.hero.card3"}}</div>
+      <div class="hero-card-row"><span>💳</span> {{t .Lang "home.hero.card4"}}</div>
+      <div class="hero-card-row"><span>⭐</span> {{t .Lang "home.hero.card5"}}</div>
     </div>
   </div>
 </section>
 
 <section class="container section">
   <div class="section-head center-head">
-    <h2>Запишитесь к врачу всего за несколько минут</h2>
-    <p class="muted">Без звонков, очередей и долгого ожидания.</p>
+    <h2>{{t .Lang "home.flow.title"}}</h2>
+    <p class="muted">{{t .Lang "home.flow.subtitle"}}</p>
   </div>
   <div class="flow-row">
     <div class="flow-card">
       <div class="flow-icon">📍</div>
-      <h3>Найдите клинику</h3>
+      <h3>{{t .Lang "home.flow.step1"}}</h3>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-card">
       <div class="flow-icon">👨‍⚕️</div>
-      <h3>Выберите специалиста</h3>
+      <h3>{{t .Lang "home.flow.step2"}}</h3>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-card">
       <div class="flow-icon">📅</div>
-      <h3>Выберите время</h3>
+      <h3>{{t .Lang "home.flow.step3"}}</h3>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-card">
       <div class="flow-icon">💳</div>
-      <h3>Оплатите онлайн</h3>
+      <h3>{{t .Lang "home.flow.step4"}}</h3>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-card">
       <div class="flow-icon">✅</div>
-      <h3>Посетите приём</h3>
+      <h3>{{t .Lang "home.flow.step5"}}</h3>
     </div>
   </div>
   <div class="center" style="margin-top:28px;">
-    <a href="/clinics" class="btn btn-primary">Попробовать сейчас</a>
+    <a href="/clinics" class="btn btn-primary">{{t .Lang "home.flow.cta"}}</a>
   </div>
 </section>
 
 <section class="container section why-us">
   <div class="section-head center-head">
-    <h2>Почему выбирают Avorimi</h2>
+    <h2>{{t .Lang "home.why.title"}}</h2>
   </div>
   <div class="grid grid-3">
-    <div class="why-card"><div class="why-icon">⚡</div><h3>Запись за 2 минуты</h3></div>
-    <div class="why-card"><div class="why-icon">🏥</div><h3>Проверенные клиники</h3></div>
-    <div class="why-card"><div class="why-icon">💳</div><h3>Онлайн-оплата</h3></div>
-    <div class="why-card"><div class="why-icon">📱</div><h3>Все записи в одном месте</h3></div>
-    <div class="why-card"><div class="why-icon">🔒</div><h3>Защита персональных данных</h3></div>
-    <div class="why-card"><div class="why-icon">❤️</div><h3>Экономия благодаря подпискам</h3></div>
+    <div class="why-card"><div class="why-icon">⚡</div><h3>{{t .Lang "home.why.1"}}</h3></div>
+    <div class="why-card"><div class="why-icon">🏥</div><h3>{{t .Lang "home.why.2"}}</h3></div>
+    <div class="why-card"><div class="why-icon">💳</div><h3>{{t .Lang "home.why.3"}}</h3></div>
+    <div class="why-card"><div class="why-icon">📱</div><h3>{{t .Lang "home.why.4"}}</h3></div>
+    <div class="why-card"><div class="why-icon">🔒</div><h3>{{t .Lang "home.why.5"}}</h3></div>
+    <div class="why-card"><div class="why-icon">❤️</div><h3>{{t .Lang "home.why.6"}}</h3></div>
     <div class="why-card">
       <div class="why-icon">🧪</div>
-      <h3>Анализы в личном кабинете</h3>
-      <p class="muted">Результаты сохраняются в кабинете — уведомим, как только они будут готовы.</p>
+      <h3>{{t .Lang "home.why.7"}}</h3>
+      <p class="muted">{{t .Lang "home.why.7sub"}}</p>
     </div>
   </div>
 </section>
 
 <section class="container section">
   <div class="section-head">
-    <h2>Популярные медицинские направления</h2>
-    <a href="/catalog">Все направления →</a>
+    <h2>{{t .Lang "home.specialties.title"}}</h2>
+    <a href="/catalog">{{t .Lang "home.specialties.all"}}</a>
   </div>
   <div class="grid specialty-grid">
-    <a class="specialty-card" href="/catalog?category=Терапевт">🩺<span>Терапевт</span></a>
-    <a class="specialty-card" href="/catalog?category=Стоматолог">🦷<span>Стоматолог</span></a>
-    <a class="specialty-card" href="/catalog?category=Кардиолог">❤️<span>Кардиолог</span></a>
-    <a class="specialty-card" href="/catalog?category=Педиатр">👶<span>Педиатр</span></a>
-    <a class="specialty-card" href="/catalog?category=Гинеколог">👩<span>Гинеколог</span></a>
-    <a class="specialty-card" href="/catalog?category=Офтальмолог">👁️<span>Офтальмолог</span></a>
-    <a class="specialty-card" href="/catalog?category=Невролог">🧠<span>Невролог</span></a>
-    <a class="specialty-card" href="/catalog?category=Ортопед">🦴<span>Ортопед</span></a>
+    <a class="specialty-card" href="/catalog?category=Терапевт">🩺<span>{{specialty .Lang "Терапевт"}}</span></a>
+    <a class="specialty-card" href="/catalog?category=Стоматолог">🦷<span>{{specialty .Lang "Стоматолог"}}</span></a>
+    <a class="specialty-card" href="/catalog?category=Кардиолог">❤️<span>{{specialty .Lang "Кардиолог"}}</span></a>
+    <a class="specialty-card" href="/catalog?category=Педиатр">👶<span>{{specialty .Lang "Педиатр"}}</span></a>
+    <a class="specialty-card" href="/catalog?category=Гинеколог">👩<span>{{specialty .Lang "Гинеколог"}}</span></a>
+    <a class="specialty-card" href="/catalog?category=Офтальмолог">👁️<span>{{specialty .Lang "Офтальмолог"}}</span></a>
+    <a class="specialty-card" href="/catalog?category=Невролог">🧠<span>{{specialty .Lang "Невролог"}}</span></a>
+    <a class="specialty-card" href="/catalog?category=Ортопед">🦴<span>{{specialty .Lang "Ортопед"}}</span></a>
   </div>
 </section>
 
 <section class="container section" id="clinics-map">
   <div class="section-head center-head">
-    <h2>Найдите клинику рядом с вами</h2>
+    <h2>{{t .Lang "home.map.title"}}</h2>
   </div>
   <div id="map" class="clinics-map"></div>
   <div class="map-points">
-    <span>✔ {{.ClinicsCount}} клиник поблизости</span>
-    <span>✔ {{.DoctorsCount}} докторов и специалистов</span>
-    <span>✔ Сотни свободных окон каждый день</span>
+    <span>✔ {{.ClinicsCount}} {{t .Lang "home.map.point1"}}</span>
+    <span>✔ {{.DoctorsCount}} {{t .Lang "home.map.point2"}}</span>
+    <span>✔ {{t .Lang "home.map.point3"}}</span>
   </div>
   <div class="center" style="margin-top:20px;">
-    <a href="/clinics" class="btn btn-primary">Открыть карту</a>
+    <a href="/clinics" class="btn btn-primary">{{t .Lang "home.map.cta"}}</a>
   </div>
 </section>
 
 <section class="container section">
   <div class="section-head">
-    <h2>Популярные специалисты</h2>
+    <h2>{{t .Lang "home.doctors.title"}}</h2>
   </div>
   <div class="grid grid-3">
     {{range .PopularDoctors}}
@@ -118,10 +117,10 @@
       <span class="avatar avatar-lg">{{initial .Item.Name}}</span>
       <div class="card-body">
         <h3>{{.Item.Name}}</h3>
-        <p class="muted">{{.Item.Category}} · {{.ClinicName}}</p>
+        <p class="muted">{{specialty $.Lang .Item.Category}} · {{.ClinicName}}</p>
         <p class="rating-pill">★ {{printf "%.1f" .Item.Rating}}</p>
-        <p class="muted">{{if .NextSlot}}Ближайшая запись: {{when .NextSlot.When}}{{else}}Уточняйте время{{end}}</p>
-        <a href="/item/{{.Item.ID}}" class="btn btn-primary btn-sm">Записаться</a>
+        <p class="muted">{{if .NextSlot}}{{t $.Lang "home.doctors.nextSlot"}} {{when $.Lang .NextSlot.When}}{{else}}{{t $.Lang "home.doctors.tbd"}}{{end}}</p>
+        <a href="/item/{{.Item.ID}}" class="btn btn-primary btn-sm">{{t $.Lang "home.doctors.cta"}}</a>
       </div>
     </div>
     {{end}}
@@ -130,74 +129,73 @@
 
 <section class="container section stats-section">
   <div class="grid grid-4">
-    <div class="stat-card"><div class="stat-num">{{.ClinicsCount}}+</div><div class="muted">клиник</div></div>
-    <div class="stat-card"><div class="stat-num">{{.DoctorsCount}}+</div><div class="muted">специалистов</div></div>
-    <div class="stat-card"><div class="stat-num">{{.BookingsCount}}</div><div class="muted">записей</div></div>
-    <div class="stat-card"><div class="stat-num">{{printf "%.1f" .AvgRating}}★</div><div class="muted">средняя оценка</div></div>
+    <div class="stat-card"><div class="stat-num">{{.ClinicsCount}}+</div><div class="muted">{{t .Lang "home.stats.clinics"}}</div></div>
+    <div class="stat-card"><div class="stat-num">{{.DoctorsCount}}+</div><div class="muted">{{t .Lang "home.stats.specialists"}}</div></div>
+    <div class="stat-card"><div class="stat-num">{{.BookingsCount}}</div><div class="muted">{{t .Lang "home.stats.bookings"}}</div></div>
+    <div class="stat-card"><div class="stat-num">{{printf "%.1f" .AvgRating}}★</div><div class="muted">{{t .Lang "home.stats.rating"}}</div></div>
   </div>
 </section>
 
 <section class="container section">
   <div class="section-head center-head">
-    <h2>Отзывы пользователей</h2>
+    <h2>{{t .Lang "home.reviews.title"}}</h2>
   </div>
   <div class="grid grid-3">
     <div class="card review-card">
       <p class="rating-pill">★★★★★</p>
-      <p>«Очень быстро записалась к врачу.»</p>
-      <p class="muted">— Алия</p>
+      <p>{{t .Lang "home.reviews.text1"}}</p>
+      <p class="muted">{{t .Lang "home.reviews.name1"}}</p>
     </div>
     <div class="card review-card">
       <p class="rating-pill">★★★★★</p>
-      <p>«Лучший сервис записи в клиники.»</p>
-      <p class="muted">— Руслан</p>
+      <p>{{t .Lang "home.reviews.text2"}}</p>
+      <p class="muted">{{t .Lang "home.reviews.name2"}}</p>
     </div>
     <div class="card review-card">
       <p class="rating-pill">★★★★★</p>
-      <p>«Теперь не приходится звонить.»</p>
-      <p class="muted">— Максим</p>
+      <p>{{t .Lang "home.reviews.text3"}}</p>
+      <p class="muted">{{t .Lang "home.reviews.name3"}}</p>
     </div>
   </div>
 </section>
 
 <section class="container section subs-teaser">
   <div class="section-head">
-    <h2>Подписки на визиты</h2>
-    <a href="/subscriptions">Все планы →</a>
+    <h2>{{t .Lang "home.subs.title"}}</h2>
+    <a href="/subscriptions">{{t .Lang "home.subs.all"}}</a>
   </div>
-  <p class="muted">Выберите подписку, которая подходит именно вам. Подписка помогает экономить
-  на медицинских услугах и получать быстрый доступ к специалистам.</p>
+  <p class="muted">{{t .Lang "home.subs.intro"}}</p>
   <div class="grid grid-3">
     {{range .Plans}}
     <div class="plan-card {{if .Highlight}}plan-highlight{{end}}">
       <h3>{{.Name}}</h3>
       <p class="plan-price">{{.Price}}</p>
-      <p class="muted">{{.Visits}} визитов в месяц бесплатно</p>
-      <a href="/subscribe/{{.ID}}" class="btn btn-primary btn-block">Оформить</a>
+      <p class="muted">{{.Visits}} {{t $.Lang "home.subs.visitsFree"}}</p>
+      <a href="/subscribe/{{.ID}}" class="btn btn-primary btn-block">{{t $.Lang "home.subs.cta"}}</a>
     </div>
     {{end}}
   </div>
 </section>
 
-<section class="container section">
+<section class="container section" id="faq">
   <div class="section-head center-head">
-    <h2>Частые вопросы</h2>
+    <h2>{{t .Lang "home.faq.title"}}</h2>
   </div>
   <div class="faq-list">
-    <details class="faq-item"><summary>Как работает подписка?</summary><p class="muted">Вы оплачиваете тариф раз в месяц и получаете определённое число бесплатных визитов к врачам или на процедуры — записываетесь как обычно и отмечаете оплату подпиской.</p></details>
-    <details class="faq-item"><summary>Можно ли вернуть деньги?</summary><p class="muted">Да, если визит не состоялся не по вашей вине — напишите в поддержку, и мы разберёмся индивидуально.</p></details>
-    <details class="faq-item"><summary>Как записаться?</summary><p class="muted">Найдите клинику рядом, выберите направление и врача, затем удобное время — запись подтверждается сразу.</p></details>
-    <details class="faq-item"><summary>Как отменить запись?</summary><p class="muted">В разделе «Мои записи» можно посмотреть все свои визиты; для отмены обратитесь в поддержку — скоро это можно будет сделать в один клик.</p></details>
-    <details class="faq-item"><summary>Какие клиники подключены?</summary><p class="muted">Мы сотрудничаем с проверенными многопрофильными клиниками вашего города — полный список смотрите в разделе «Клиники рядом».</p></details>
-    <details class="faq-item"><summary>Что входит в тариф?</summary><p class="muted">Каждый тариф даёт определённое число бесплатных визитов в месяц к любым врачам или на процедуры из каталога.</p></details>
-    <details class="faq-item"><summary>Как изменить подписку?</summary><p class="muted">Оформите новый тариф в разделе «Подписки» — он заменит текущий при следующей оплате.</p></details>
+    <details class="faq-item"><summary>{{t .Lang "home.faq.q1"}}</summary><p class="muted">{{t .Lang "home.faq.a1"}}</p></details>
+    <details class="faq-item"><summary>{{t .Lang "home.faq.q2"}}</summary><p class="muted">{{t .Lang "home.faq.a2"}}</p></details>
+    <details class="faq-item"><summary>{{t .Lang "home.faq.q3"}}</summary><p class="muted">{{t .Lang "home.faq.a3"}}</p></details>
+    <details class="faq-item"><summary>{{t .Lang "home.faq.q4"}}</summary><p class="muted">{{t .Lang "home.faq.a4"}}</p></details>
+    <details class="faq-item"><summary>{{t .Lang "home.faq.q5"}}</summary><p class="muted">{{t .Lang "home.faq.a5"}}</p></details>
+    <details class="faq-item"><summary>{{t .Lang "home.faq.q6"}}</summary><p class="muted">{{t .Lang "home.faq.a6"}}</p></details>
+    <details class="faq-item"><summary>{{t .Lang "home.faq.q7"}}</summary><p class="muted">{{t .Lang "home.faq.a7"}}</p></details>
   </div>
 </section>
 
 <section class="container section final-cta">
-  <h2>Заботьтесь о здоровье вместе с Avorimi</h2>
-  <p>Выберите клинику, найдите врача и запишитесь онлайн уже сегодня.</p>
-  <a href="/clinics" class="btn btn-primary">📍 Найти клинику</a>
+  <h2>{{t .Lang "home.cta.title"}}</h2>
+  <p>{{t .Lang "home.cta.subtitle"}}</p>
+  <a href="/clinics" class="btn btn-primary">{{t .Lang "home.cta.button"}}</a>
 </section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

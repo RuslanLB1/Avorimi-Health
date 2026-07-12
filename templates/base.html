@@ -1,6 +1,6 @@
 {{define "header"}}
 <!doctype html>
-<html lang="ru">
+<html lang="{{.Lang}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,17 +13,20 @@
     <div class="container header-inner">
       <a href="/" class="logo">Avorimi<span>Health</span></a>
       <nav class="main-nav">
-        <a href="/clinics">Клиники рядом</a>
-        <a href="/catalog">Все специалисты</a>
-        <a href="/subscriptions">Подписки</a>
-        {{if .CurrentUser}}<a href="/account">Мои записи</a>{{end}}
+        <a href="/clinics">{{t .Lang "nav.clinics"}}</a>
+        <a href="/catalog">{{t .Lang "nav.catalog"}}</a>
+        <a href="/subscriptions">{{t .Lang "nav.subscriptions"}}</a>
+        {{if .CurrentUser}}<a href="/account">{{t .Lang "nav.myBookings"}}</a>{{end}}
       </nav>
       <div class="header-actions">
-        <select class="lang-switch" onchange="handleLangSwitch(this)">
-          <option value="ru">🇷🇺 RU</option>
-          <option value="kz">🇰🇿 KZ</option>
-          <option value="en">🇬🇧 EN</option>
-        </select>
+        <form method="get" action="/set-lang" class="lang-form" onchange="this.submit()">
+          <input type="hidden" name="redirect" value="{{.CurrentPath}}">
+          <select class="lang-switch" name="lang">
+            <option value="ru" {{if eq .Lang "ru"}}selected{{end}}>🇷🇺 RU</option>
+            <option value="kz" {{if eq .Lang "kz"}}selected{{end}}>🇰🇿 KZ</option>
+            <option value="en" {{if eq .Lang "en"}}selected{{end}}>🇬🇧 EN</option>
+          </select>
+        </form>
         {{if .CurrentUser}}
         <button class="profile-btn" onclick="toggleProfile()" type="button">
           <span class="avatar-wrap">
@@ -33,8 +36,8 @@
           <span class="profile-btn-name">{{.CurrentUser.FullName}}</span>
         </button>
         {{else}}
-        <a href="/login" class="btn btn-outline btn-sm">Войти</a>
-        <a href="/register" class="btn btn-primary btn-sm">Регистрация</a>
+        <a href="/login" class="btn btn-outline btn-sm">{{t .Lang "nav.login"}}</a>
+        <a href="/register" class="btn btn-primary btn-sm">{{t .Lang "nav.register"}}</a>
         {{end}}
       </div>
     </div>
@@ -52,40 +55,40 @@
     </div>
 
     <div class="profile-section">
-      <h4>Подписка</h4>
+      <h4>{{t .Lang "profile.subscription"}}</h4>
       {{if .ActiveSub}}
       <div class="sub-box left">
         <div>
           <strong>{{.ActiveSubPlan.Name}}</strong>
-          <p class="muted">Осталось визитов: {{.ActiveSub.VisitsLeft}} из {{.ActiveSubPlan.Visits}}</p>
-          <p class="muted">Действует до {{when .ActiveSub.ExpiresAt}}</p>
+          <p class="muted">{{t .Lang "profile.visitsLeft"}} {{.ActiveSub.VisitsLeft}} {{t .Lang "profile.of"}} {{.ActiveSubPlan.Visits}}</p>
+          <p class="muted">{{t .Lang "profile.activeUntil"}} {{when .Lang .ActiveSub.ExpiresAt}}</p>
         </div>
       </div>
       {{else}}
-      <p class="muted">Подписки пока нет.</p>
-      <a href="/subscriptions" class="btn btn-primary btn-block btn-sm">Оформить подписку</a>
+      <p class="muted">{{t .Lang "profile.noSub"}}</p>
+      <a href="/subscriptions" class="btn btn-primary btn-block btn-sm">{{t .Lang "profile.getSub"}}</a>
       {{end}}
     </div>
 
     {{if .ReadyLabResults}}
     <div class="profile-section">
-      <h4>Уведомления</h4>
+      <h4>{{t .Lang "profile.notifications"}}</h4>
       {{range .ReadyLabResults}}
-      <p class="notif-line">🧪 {{.Item.Category}} — результат готов</p>
+      <p class="notif-line">🧪 {{specialty $.Lang .Item.Category}} {{t $.Lang "profile.resultReady"}}</p>
       {{end}}
     </div>
     {{end}}
 
     <div class="profile-section">
-      <h4>Аккаунт</h4>
-      <a href="/account" class="profile-link">📋 Мои записи</a>
-      <a href="/results" class="profile-link">🧪 Мои анализы</a>
-      <a href="/subscriptions" class="profile-link">♾️ Тарифы подписки</a>
-      <a href="/clinics" class="profile-link">📍 Клиники рядом</a>
+      <h4>{{t .Lang "profile.account"}}</h4>
+      <a href="/account" class="profile-link">📋 {{t .Lang "nav.myBookings"}}</a>
+      <a href="/results" class="profile-link">🧪 {{t .Lang "profile.myResults"}}</a>
+      <a href="/subscriptions" class="profile-link">♾️ {{t .Lang "profile.subPlans"}}</a>
+      <a href="/clinics" class="profile-link">📍 {{t .Lang "profile.nearbyClinics"}}</a>
     </div>
 
     <form method="post" action="/logout">
-      <button type="submit" class="btn btn-outline btn-block">Выйти</button>
+      <button type="submit" class="btn btn-outline btn-block">{{t .Lang "profile.logout"}}</button>
     </form>
   </aside>
   {{end}}
@@ -98,54 +101,50 @@
   <footer class="site-footer">
     <div class="container footer-grid">
       <div class="footer-col">
-        <h4>Контакты</h4>
-        <p>📞 Поддержка<br><a href="tel:+77080908161">+7 708 090 81 61</a></p>
-        <p>✉ Email<br><a href="mailto:avorimihealth@gmail.com">avorimihealth@gmail.com</a></p>
-        <p>🕘 Поддержка<br>Круглосуточно (24/7)</p>
+        <h4>{{t .Lang "footer.contacts"}}</h4>
+        <p>📞 {{t .Lang "footer.support"}}<br><a href="tel:+77080908161">+7 708 090 81 61</a></p>
+        <p>✉ {{t .Lang "footer.email"}}<br><a href="mailto:avorimihealth@gmail.com">avorimihealth@gmail.com</a></p>
+        <p>🕘 {{t .Lang "footer.support"}}<br>{{t .Lang "footer.supportHours"}}</p>
       </div>
 
       <div class="footer-col">
-        <h4>Социальные сети</h4>
-        <p class="muted">Следите за Avorimi Health</p>
+        <h4>{{t .Lang "footer.social"}}</h4>
+        <p class="muted">{{t .Lang "footer.followUs"}}</p>
       </div>
 
       <div class="footer-col">
-        <h4>Экосистема Avorimi</h4>
-        <p>❤️ <strong>Avorimi Health</strong> — <span class="muted">поиск клиник, запись к врачам и медицинские подписки.</span></p>
-        <p>🤝 <strong>Avorimi Hearts</strong> — <a href="https://instagram.com/avorimi_hearts" target="_blank" rel="noopener">Instagram</a> — <span class="muted">благотворительный фонд.</span></p>
-        <p>🌸 <strong>Avorimi Floral</strong> <span class="soon-badge">Скоро</span> — <span class="muted">цветы премиум-класса для особых моментов.</span></p>
+        <h4>{{t .Lang "footer.ecosystem"}}</h4>
+        <p>❤️ <strong>Avorimi Health</strong> — <span class="muted">{{t .Lang "footer.healthDesc"}}</span></p>
+        <p>🤝 <strong>Avorimi Hearts</strong> — <a href="https://instagram.com/avorimi_hearts" target="_blank" rel="noopener">Instagram</a> — <span class="muted">{{t .Lang "footer.heartsDesc"}}</span></p>
+        <p>🌸 <strong>Avorimi Floral</strong> <span class="soon-badge">{{t .Lang "footer.soon"}}</span> — <span class="muted">{{t .Lang "footer.floralDesc"}}</span></p>
       </div>
 
       <div class="footer-col">
-        <h4>Навигация</h4>
-        <a href="/">О сервисе</a>
-        <a href="/#faq">Частые вопросы</a>
-        <a href="mailto:avorimihealth@gmail.com">Контакты</a>
+        <h4>{{t .Lang "footer.nav"}}</h4>
+        <a href="/">{{t .Lang "footer.about"}}</a>
+        <a href="/#faq">{{t .Lang "footer.faq"}}</a>
+        <a href="mailto:avorimihealth@gmail.com">{{t .Lang "footer.contactsLink"}}</a>
         <div class="lang-switch-row">
-          <select class="lang-switch" onchange="handleLangSwitch(this)">
-            <option value="ru">🇷🇺 Русский</option>
-            <option value="kz">🇰🇿 Қазақша</option>
-            <option value="en">🇬🇧 English</option>
-          </select>
+          <form method="get" action="/set-lang" onchange="this.submit()">
+            <input type="hidden" name="redirect" value="{{.CurrentPath}}">
+            <select class="lang-switch" name="lang">
+              <option value="ru" {{if eq .Lang "ru"}}selected{{end}}>🇷🇺 Русский</option>
+              <option value="kz" {{if eq .Lang "kz"}}selected{{end}}>🇰🇿 Қазақша</option>
+              <option value="en" {{if eq .Lang "en"}}selected{{end}}>🇬🇧 English</option>
+            </select>
+          </form>
         </div>
       </div>
     </div>
 
     <div class="container footer-bottom">
-      <p>© 2026 Avorimi. Все права защищены. Создано с ❤️ в Казахстане. Версия 1.0</p>
+      <p>{{t .Lang "footer.bottom"}}</p>
     </div>
   </footer>
   <script>
     function toggleProfile() {
       document.getElementById('profilePanel').classList.toggle('open');
       document.getElementById('profileOverlay').classList.toggle('open');
-    }
-    function handleLangSwitch(select) {
-      if (select.value !== 'ru') {
-        var original = select.value;
-        select.title = 'Скоро доступно';
-        setTimeout(function () { select.value = 'ru'; }, 400);
-      }
     }
   </script>
 </body>

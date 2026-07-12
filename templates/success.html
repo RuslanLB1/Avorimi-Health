@@ -2,12 +2,12 @@
 
 <section class="container section narrow center">
   <div class="success-icon">✅</div>
-  <h1>Вы записаны!</h1>
+  <h1>{{t .Lang "success.title"}}</h1>
   <p class="muted">
     {{if eq .Booking.Status "free_by_subscription"}}
-      Визит оплачен подпиской — с вас ничего не списано.
+      {{t .Lang "success.paidBySub"}}
     {{else}}
-      Оплата прошла успешно.
+      {{t .Lang "success.paidOk"}}
     {{end}}
   </p>
 
@@ -15,17 +15,17 @@
     <div class="card-emoji">{{.Item.Emoji}}</div>
     <div>
       <h3>{{.Item.Name}}</h3>
-      <p class="muted">{{.Item.Category}} · {{when .Slot.When}}</p>
-      <p class="muted">Запись №{{.Booking.ID}} на имя {{.CurrentUser.FullName}}</p>
+      <p class="muted">{{specialty .Lang .Item.Category}} · {{when .Lang .Slot.When}}</p>
+      <p class="muted">{{t .Lang "pay.recordNum"}}{{.Booking.ID}} {{t .Lang "success.recordFor"}} {{.CurrentUser.FullName}}</p>
       <p class="price">
-        {{if eq .Booking.Status "free_by_subscription"}}Бесплатно по подписке{{else}}{{money .Booking.Price}} · оплачено{{end}}
+        {{if eq .Booking.Status "free_by_subscription"}}{{t .Lang "success.freeBySub"}}{{else}}{{money .Booking.Price}} · {{t .Lang "success.paid"}}{{end}}
       </p>
     </div>
   </div>
 
   <div class="hero-actions center">
-    <a href="/account" class="btn btn-primary">Мои записи</a>
-    <a href="/catalog" class="btn btn-outline">Записаться ещё</a>
+    <a href="/account" class="btn btn-primary">{{t .Lang "success.myBookings"}}</a>
+    <a href="/catalog" class="btn btn-outline">{{t .Lang "success.bookMore"}}</a>
   </div>
 </section>
 

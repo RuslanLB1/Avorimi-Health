@@ -1,7 +1,7 @@
 {{define "clinic.html"}}{{template "header" .}}
 
 <section class="container section item-page">
-  <a href="/clinics" class="muted">← Все клиники</a>
+  <a href="/clinics" class="muted">{{t .Lang "clinic.backAll"}}</a>
 
   <div class="item-hero" style="margin-top:16px;">
     <div class="card-emoji big">{{.Clinic.Emoji}}</div>
@@ -13,22 +13,22 @@
     </div>
   </div>
 
-  <h2>Доступные обследования</h2>
+  <h2>{{t .Lang "clinic.available"}}</h2>
   {{if .Groups}}
   <div class="grid">
     {{range .Groups}}
     <a class="card" href="/clinic/{{$.Clinic.ID}}/exam/{{.Category}}">
       <div class="card-emoji">{{.Emoji}}</div>
       <div class="card-body">
-        <h3>{{.Category}}</h3>
-        <p class="muted">{{.Count}} врача · от {{money .MinPrice}}</p>
+        <h3>{{specialty $.Lang .Category}}</h3>
+        <p class="muted">{{.Count}} {{t $.Lang "clinic.doctorsFrom"}} {{money .MinPrice}}</p>
         <p class="rating-pill">★ {{printf "%.1f" .MaxRating}}</p>
       </div>
     </a>
     {{end}}
   </div>
   {{else}}
-  <p class="muted">В этой клинике пока нет доступных направлений.</p>
+  <p class="muted">{{t .Lang "clinic.none"}}</p>
   {{end}}
 </section>
 

@@ -1,18 +1,18 @@
 {{define "subscriptions.html"}}{{template "header" .}}
 
 <section class="container section">
-  <h1>Подписки на визиты</h1>
-  <p class="muted">Оплачивайте посещения врачей и процедуры одной подпиской — без отдельной оплаты за каждый визит.</p>
+  <h1>{{t .Lang "subscriptions.title"}}</h1>
+  <p class="muted">{{t .Lang "subscriptions.intro"}}</p>
 
   <div class="grid grid-3">
     {{range .Plans}}
     <div class="plan-card {{if .Highlight}}plan-highlight{{end}}">
-      {{if .Highlight}}<div class="plan-badge">Популярный</div>{{end}}
+      {{if .Highlight}}<div class="plan-badge">{{t $.Lang "subscriptions.popular"}}</div>{{end}}
       <h3>{{.Name}}</h3>
       <p class="plan-price">{{.Price}}</p>
-      <p class="muted">{{.Visits}} визитов в месяц бесплатно</p>
+      <p class="muted">{{.Visits}} {{t $.Lang "home.subs.visitsFree"}}</p>
       <p>{{.Description}}</p>
-      <a href="/subscribe/{{.ID}}" class="btn btn-primary btn-block">Оформить подписку</a>
+      <a href="/subscribe/{{.ID}}" class="btn btn-primary btn-block">{{t $.Lang "subscriptions.getSub"}}</a>
     </div>
     {{end}}
   </div>

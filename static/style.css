@@ -580,6 +580,7 @@ input:disabled { background: var(--bg); color: var(--muted); }
 .footer-bottom p { color: var(--muted); font-size: 12.5px; margin: 0; }
 
 /* Language switcher */
+.lang-form { display: flex; align-items: center; }
 .lang-switch {
   border: 1.5px solid var(--border);
   border-radius: 8px;

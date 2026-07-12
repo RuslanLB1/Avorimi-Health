@@ -1,19 +1,19 @@
 {{define "catalog.html"}}{{template "header" .}}
 
 <section class="container section">
-  <h1>Врачи и процедуры</h1>
+  <h1>{{t .Lang "catalog.title"}}</h1>
 
   <div class="filters">
-    <a class="chip {{if eq .ActiveType ""}}chip-active{{end}}" href="/catalog">Все</a>
-    <a class="chip {{if eq .ActiveType "doctor"}}chip-active{{end}}" href="/catalog?type=doctor">Врачи</a>
-    <a class="chip {{if eq .ActiveType "procedure"}}chip-active{{end}}" href="/catalog?type=procedure">Процедуры</a>
+    <a class="chip {{if eq .ActiveType ""}}chip-active{{end}}" href="/catalog">{{t .Lang "catalog.all"}}</a>
+    <a class="chip {{if eq .ActiveType "doctor"}}chip-active{{end}}" href="/catalog?type=doctor">{{t .Lang "catalog.doctors"}}</a>
+    <a class="chip {{if eq .ActiveType "procedure"}}chip-active{{end}}" href="/catalog?type=procedure">{{t .Lang "catalog.procedures"}}</a>
   </div>
 
   {{if .Categories}}
   <div class="filters filters-sub">
-    <a class="chip {{if eq .ActiveCategory ""}}chip-active{{end}}" href="/catalog?type={{.ActiveType}}">Все категории</a>
+    <a class="chip {{if eq .ActiveCategory ""}}chip-active{{end}}" href="/catalog?type={{.ActiveType}}">{{t .Lang "catalog.allCategories"}}</a>
     {{range .Categories}}
-    <a class="chip {{if eq $.ActiveCategory .}}chip-active{{end}}" href="/catalog?type={{$.ActiveType}}&category={{.}}">{{.}}</a>
+    <a class="chip {{if eq $.ActiveCategory .}}chip-active{{end}}" href="/catalog?type={{$.ActiveType}}&category={{.}}">{{specialty $.Lang .}}</a>
     {{end}}
   </div>
   {{end}}
@@ -21,17 +21,17 @@
   <form method="get" action="/catalog" class="filters-bar">
     <input type="hidden" name="type" value="{{.ActiveType}}">
     <input type="hidden" name="category" value="{{.ActiveCategory}}">
-    <label class="select-label">Сортировка
+    <label class="select-label">{{t .Lang "catalog.sort"}}
       <select name="sort" onchange="this.form.submit()">
-        <option value="">По умолчанию</option>
-        <option value="price_asc" {{if eq .Sort "price_asc"}}selected{{end}}>Сначала дешевле</option>
-        <option value="price_desc" {{if eq .Sort "price_desc"}}selected{{end}}>Сначала дороже</option>
-        <option value="rating" {{if eq .Sort "rating"}}selected{{end}}>По рейтингу</option>
+        <option value="">{{t .Lang "catalog.sortDefault"}}</option>
+        <option value="price_asc" {{if eq .Sort "price_asc"}}selected{{end}}>{{t .Lang "catalog.sortPriceAsc"}}</option>
+        <option value="price_desc" {{if eq .Sort "price_desc"}}selected{{end}}>{{t .Lang "catalog.sortPriceDesc"}}</option>
+        <option value="rating" {{if eq .Sort "rating"}}selected{{end}}>{{t .Lang "catalog.sortRating"}}</option>
       </select>
     </label>
     <label class="checkbox-row inline">
       <input type="checkbox" name="today" value="1" {{if .Today}}checked{{end}} onchange="this.form.submit()">
-      Есть время сегодня
+      {{t .Lang "catalog.todayFilter"}}
     </label>
   </form>
 
@@ -41,13 +41,13 @@
       <div class="card-emoji">{{.Emoji}}</div>
       <div class="card-body">
         <h3>{{.Name}}</h3>
-        <p class="muted">{{.Category}} · {{.Duration}} · ★ {{.Rating}}</p>
+        <p class="muted">{{specialty $.Lang .Category}} · {{duration $.Lang .Duration}} · ★ {{.Rating}}</p>
         <p class="muted">🏥 {{.ClinicName}}</p>
         <p class="price">{{money .Price}}</p>
       </div>
     </a>
     {{else}}
-    <p class="muted">Ничего не найдено по выбранным фильтрам.</p>
+    <p class="muted">{{t .Lang "catalog.empty"}}</p>
     {{end}}
   </div>
 </section>

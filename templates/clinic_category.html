@@ -4,11 +4,11 @@
   <a href="/clinic/{{.Clinic.ID}}" class="muted">← {{.Clinic.Name}}</a>
 
   <div class="section-head" style="margin-top:16px;">
-    <h1>{{.Category}}</h1>
+    <h1>{{specialty .Lang .Category}}</h1>
   </div>
   <p class="muted">{{.Clinic.Name}} · {{.Clinic.Address}}</p>
 
-  <p class="muted" style="margin-top:18px;">Выберите врача — время и цена у каждого своё.</p>
+  <p class="muted" style="margin-top:18px;">{{t .Lang "clinicCategory.choose"}}</p>
   <div class="grid">
     {{range .Items}}
     <a class="card" href="/item/{{.ID}}">
@@ -16,7 +16,7 @@
       <div class="card-body">
         <h3>{{.Name}}</h3>
         <p class="rating-pill">★ {{printf "%.1f" .Rating}}</p>
-        <p class="muted">{{.Duration}}</p>
+        <p class="muted">{{duration $.Lang .Duration}}</p>
         <p class="price">{{money .Price}}</p>
       </div>
     </a>

@@ -1,7 +1,7 @@
 {{define "account.html"}}{{template "header" .}}
 
 <section class="container section narrow">
-  <h1>Мои записи</h1>
+  <h1>{{t .Lang "account.title"}}</h1>
 
   <div class="summary-box left">
     <span class="avatar avatar-lg">{{initial .CurrentUser.FullName}}</span>
@@ -14,21 +14,21 @@
   {{if .ActiveSub}}
   <div class="summary-box left sub-box">
     <div>
-      <h3>Подписка «{{.ActiveSubPlan.Name}}»</h3>
-      <p class="muted">Доступно визитов: {{.ActiveSub.VisitsLeft}} · действует до {{when .ActiveSub.ExpiresAt}}</p>
+      <h3>{{t .Lang "profile.subscription"}} «{{.ActiveSubPlan.Name}}»</h3>
+      <p class="muted">{{t .Lang "subscribeSuccess.visitsAvail"}} {{.ActiveSub.VisitsLeft}} · {{t .Lang "profile.activeUntil"}} {{when .Lang .ActiveSub.ExpiresAt}}</p>
     </div>
   </div>
   {{else}}
   <div class="summary-box left sub-box-empty">
     <div>
-      <h3>Подписки нет</h3>
-      <p class="muted">Оформите подписку, чтобы получать визиты бесплатно.</p>
+      <h3>{{t .Lang "account.noSub"}}</h3>
+      <p class="muted">{{t .Lang "account.getSubToFree"}}</p>
     </div>
-    <a href="/subscriptions" class="btn btn-primary btn-sm">Оформить</a>
+    <a href="/subscriptions" class="btn btn-primary btn-sm">{{t .Lang "account.getSub"}}</a>
   </div>
   {{end}}
 
-  <h2>История записей</h2>
+  <h2>{{t .Lang "account.history"}}</h2>
   {{if .Bookings}}
   <div class="bookings-list">
     {{range .Bookings}}
@@ -36,18 +36,18 @@
       <div class="card-emoji">{{.Item.Emoji}}</div>
       <div>
         <h3>{{.Item.Name}}</h3>
-        <p class="muted">{{when .Slot.When}}</p>
+        <p class="muted">{{when $.Lang .Slot.When}}</p>
         <p class="price">
-          {{if eq .Booking.Status "free_by_subscription"}}Бесплатно по подписке
-          {{else if eq .Booking.Status "paid"}}{{money .Booking.Price}} · оплачено
-          {{else}}{{money .Booking.Price}} · ожидает оплаты{{end}}
+          {{if eq .Booking.Status "free_by_subscription"}}{{t $.Lang "success.freeBySub"}}
+          {{else if eq .Booking.Status "paid"}}{{money .Booking.Price}} · {{t $.Lang "success.paid"}}
+          {{else}}{{money .Booking.Price}} · {{t $.Lang "account.pendingPayment"}}{{end}}
         </p>
       </div>
     </div>
     {{end}}
   </div>
   {{else}}
-  <p class="muted">Записей пока нет.</p>
+  <p class="muted">{{t .Lang "account.noBookings"}}</p>
   {{end}}
 </section>
 

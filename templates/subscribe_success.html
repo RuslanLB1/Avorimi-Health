@@ -2,20 +2,20 @@
 
 <section class="container section narrow center">
   <div class="success-icon">✅</div>
-  <h1>Подписка активна!</h1>
-  <p class="muted">Оплата прошла успешно.</p>
+  <h1>{{t .Lang "subscribeSuccess.title"}}</h1>
+  <p class="muted">{{t .Lang "subscribeSuccess.paidOk"}}</p>
 
   <div class="summary-box left">
     <div>
       <h3>{{.Plan.Name}}</h3>
-      <p class="muted">Доступно визитов: {{.Subscription.VisitsLeft}} из {{.Plan.Visits}}</p>
-      <p class="muted">Действует до {{when .Subscription.ExpiresAt}}</p>
+      <p class="muted">{{t .Lang "subscribeSuccess.visitsAvail"}} {{.Subscription.VisitsLeft}} {{t .Lang "subscribeSuccess.of"}} {{.Plan.Visits}}</p>
+      <p class="muted">{{t .Lang "subscribeSuccess.validUntil"}} {{when .Lang .Subscription.ExpiresAt}}</p>
     </div>
   </div>
 
   <div class="hero-actions center">
-    <a href="/account" class="btn btn-primary">Мои записи</a>
-    <a href="/catalog" class="btn btn-outline">Записаться на визит</a>
+    <a href="/account" class="btn btn-primary">{{t .Lang "success.myBookings"}}</a>
+    <a href="/catalog" class="btn btn-outline">{{t .Lang "subscribeSuccess.bookVisit"}}</a>
   </div>
 </section>
 

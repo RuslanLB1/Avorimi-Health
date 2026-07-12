@@ -13,16 +13,20 @@ import (
 	"time"
 )
 
-// labResultTexts перечисляет направления-обследования, по которым пациенту положен
-// результат анализа/диагностики (в отличие от обычного приёма врача или процедуры вроде массажа).
-var labResultTexts = map[string]string{
-	"Общий анализ крови":         "Показатели крови в пределах нормы.",
-	"Биохимический анализ крови": "Показатели крови в пределах нормы.",
-	"УЗИ брюшной полости":        "Патологических изменений не выявлено.",
-	"УЗИ малого таза":            "Патологических изменений не выявлено.",
-	"ЭКГ с расшифровкой":         "Ритм синусовый, без отклонений.",
-	"Рентген":                    "Без признаков патологии.",
-	"Флюорография":               "Без признаков патологии.",
+// storeErrorKeys сопоставляет русскоязычные ошибки store.go с ключами переводов,
+// чтобы сообщения об ошибках тоже показывались на выбранном языке интерфейса.
+var storeErrorKeys = map[string]string{
+	"слот недоступен":                             "err.slotUnavailable",
+	"услуга не найдена":                           "err.itemNotFound",
+	"нет активной подписки с доступными визитами": "err.noActiveSubscription",
+	"план не найден":                               "err.planNotFound",
+}
+
+func bookingErrorKey(err error) string {
+	if key, ok := storeErrorKeys[err.Error()]; ok {
+		return key
+	}
+	return "err.generic"
 }
 
 // labResultReadyAfter — демо-время "обработки" анализа с момента записи, чтобы результат
@@ -30,12 +34,12 @@ var labResultTexts = map[string]string{
 const labResultReadyAfter = 90 * time.Second
 
 // LabResultView — запись на анализ/диагностику вместе со статусом готовности результата.
+// Текст результата переводится в шаблоне через labResultText(lang, Item.Category).
 type LabResultView struct {
 	Booking *Booking
 	Item    *Item
 	Slot    *Slot
 	Ready   bool
-	Result  string
 }
 
 func labResultsForUser(userID int) []LabResultView {
@@ -43,18 +47,13 @@ func labResultsForUser(userID int) []LabResultView {
 	out := make([]LabResultView, 0)
 	for _, b := range bookings {
 		item, ok := store.GetItem(b.ItemID)
-		if !ok {
-			continue
-		}
-		resultText, isLab := labResultTexts[item.Category]
-		if !isLab {
+		if !ok || !isLabCategory(item.Category) {
 			continue
 		}
 		slot, _ := store.GetSlot(b.SlotID)
 		v := LabResultView{Booking: b, Item: item, Slot: slot}
 		if time.Since(b.CreatedAt) > labResultReadyAfter {
 			v.Ready = true
-			v.Result = resultText
 		}
 		out = append(out, v)
 	}
@@ -324,7 +323,7 @@ var nonDigitRe = regexp.MustCompile(`\D`)
 func buildPhone(local string) (string, error) {
 	digits := nonDigitRe.ReplaceAllString(local, "")
 	if len(digits) != 10 {
-		return "", fmt.Errorf("введите+10+цифр+номера+телефона")
+		return "", fmt.Errorf("err.phoneDigits")
 	}
 	return "+7" + digits, nil
 }
@@ -350,7 +349,7 @@ func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if fullName == "" {
-		fail("Заполните+ФИО")
+		fail("err.fillFullName")
 		return
 	}
 	phone, err := buildPhone(r.FormValue("phone_local"))
@@ -359,15 +358,15 @@ func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !iinRe.MatchString(iin) {
-		fail("ИИН+должен+содержать+ровно+12+цифр")
+		fail("err.iinInvalid")
 		return
 	}
 	if len(password) < 6 {
-		fail("Пароль+должен+быть+не+короче+6+символов")
+		fail("err.passwordTooShort")
 		return
 	}
 	if password != confirm {
-		fail("Пароли+не+совпадают")
+		fail("err.passwordMismatch")
 		return
 	}
 
@@ -378,7 +377,7 @@ func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := store.CreateUser(iin, fullName, phone, hash)
 	if err != nil {
-		fail("Пользователь+с+таким+телефоном+уже+зарегистрирован")
+		fail("err.phoneTaken")
 		return
 	}
 
@@ -414,7 +413,7 @@ func loginSubmitHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, ok := store.GetUserByPhone(phone)
 	if !ok || !checkPassword(user.PasswordHash, password) {
-		target := "/login?error=Неверный+телефон+или+пароль"
+		target := "/login?error=err.invalidLogin"
 		if next != "" {
 			target += "&next=" + next
 		}
@@ -480,7 +479,7 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request, user *User) {
 
 	booking, err := store.CreateBooking(slotID, user.ID, useSubscription)
 	if err != nil {
-		http.Redirect(w, r, "/book/"+r.PathValue("slotID")+"?error="+err.Error(), http.StatusSeeOther)
+		http.Redirect(w, r, "/book/"+r.PathValue("slotID")+"?error="+bookingErrorKey(err), http.StatusSeeOther)
 		return
 	}
 

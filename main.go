@@ -33,9 +33,18 @@ func main() {
 			}
 			return out + " ₸"
 		},
-		"when": func(t time.Time) string {
-			months := [...]string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
-			return t.Format("02 ") + months[t.Month()-1] + t.Format(", 15:04")
+		"when": func(lang string, tt time.Time) string {
+			switch lang {
+			case "kz":
+				m := [...]string{"қаңтар", "ақпан", "наурыз", "сәуір", "мамыр", "маусым", "шілде", "тамыз", "қыркүйек", "қазан", "қараша", "желтоқсан"}
+				return tt.Format("02 ") + m[tt.Month()-1] + tt.Format(", 15:04")
+			case "en":
+				m := [...]string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+				return m[tt.Month()-1] + tt.Format(" 2, 15:04")
+			default:
+				m := [...]string{"января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"}
+				return tt.Format("02 ") + m[tt.Month()-1] + tt.Format(", 15:04")
+			}
 		},
 		"initial": func(name string) string {
 			for _, r := range name {
@@ -43,6 +52,10 @@ func main() {
 			}
 			return "?"
 		},
+		"t":         t,
+		"specialty": specialty,
+		"duration":  duration,
+		"labResult": labResultText,
 	}
 
 	var err error
@@ -82,6 +95,8 @@ func main() {
 	mux.HandleFunc("GET /account", requireAuth(accountHandler))
 	mux.HandleFunc("GET /results", requireAuth(resultsHandler))
 
+	mux.HandleFunc("GET /set-lang", setLangHandler)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -99,6 +114,8 @@ func render(w http.ResponseWriter, r *http.Request, name string, data map[string
 	if data == nil {
 		data = map[string]any{}
 	}
+	data["Lang"] = currentLang(r)
+	data["CurrentPath"] = r.URL.RequestURI()
 	if user, ok := currentUser(r); ok {
 		data["CurrentUser"] = user
 		if sub, ok := store.ActiveSubscription(user.ID); ok {

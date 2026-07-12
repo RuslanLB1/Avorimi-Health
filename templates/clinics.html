@@ -2,11 +2,11 @@
 
 <section class="container section">
   <div class="section-head">
-    <h1>{{if .HasLocation}}Клиники рядом с вами{{else}}Клиники{{end}}</h1>
-    <button class="btn btn-outline btn-sm" onclick="requestLocation()" type="button">📍 По расстоянию</button>
+    <h1>{{if .HasLocation}}{{t .Lang "clinics.titleNear"}}{{else}}{{t .Lang "clinics.titleAll"}}{{end}}</h1>
+    <button class="btn btn-outline btn-sm" onclick="requestLocation()" type="button">{{t .Lang "clinics.byDistance"}}</button>
   </div>
 
-  <p class="muted locating-note" id="locatingNote" style="display:none;">Уточняем ближайшие к вам клиники…</p>
+  <p class="muted locating-note" id="locatingNote" style="display:none;">{{t .Lang "clinics.locating"}}</p>
 
   <div class="grid" id="clinicsGrid">
     {{range .Clinics}}
@@ -16,8 +16,8 @@
         <h3>{{.Name}}</h3>
         <p class="muted">{{.Address}}</p>
         <p class="rating-pill">★ {{printf "%.1f" .Rating}}</p>
-        <p class="muted">{{.ItemCount}} направлений</p>
-        {{if $.HasLocation}}<p class="price">📍 {{printf "%.1f" .DistanceKm}} км от вас</p>{{end}}
+        <p class="muted">{{.ItemCount}} {{t $.Lang "clinics.directions"}}</p>
+        {{if $.HasLocation}}<p class="price">📍 {{printf "%.1f" .DistanceKm}} {{t $.Lang "clinics.kmAway"}}</p>{{end}}
       </div>
     </a>
     {{end}}
