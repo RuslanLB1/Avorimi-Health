@@ -559,7 +559,8 @@ input:disabled { background: var(--bg); color: var(--muted); }
 .footer-col h4 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink); }
 .footer-col p { margin: 0 0 12px; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
 .footer-col a { display: block; color: var(--muted); font-size: 13.5px; margin-bottom: 8px; }
-.footer-col a:hover { color: var(--purple); }
+.footer-col p a { display: inline; margin-bottom: 0; color: var(--purple); font-weight: 600; }
+.footer-col a:hover { color: var(--purple-dark); }
 .soon-badge {
   display: inline-block;
   background: var(--bg);
