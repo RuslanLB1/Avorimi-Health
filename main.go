@@ -97,6 +97,21 @@ func main() {
 
 	mux.HandleFunc("GET /set-lang", setLangHandler)
 
+	// JSON API для мобильного приложения (React Native / Expo).
+	mux.HandleFunc("POST /api/register", withCORS(apiRegisterHandler))
+	mux.HandleFunc("POST /api/login", withCORS(apiLoginHandler))
+	mux.HandleFunc("GET /api/me", requireAPIAuth(apiMeHandler))
+	mux.HandleFunc("GET /api/clinics", withCORS(apiClinicsHandler))
+	mux.HandleFunc("GET /api/clinics/{id}", withCORS(apiClinicDetailHandler))
+	mux.HandleFunc("GET /api/clinics/{id}/items", withCORS(apiClinicItemsHandler))
+	mux.HandleFunc("GET /api/items/{id}", withCORS(apiItemDetailHandler))
+	mux.HandleFunc("GET /api/plans", withCORS(apiPlansHandler))
+	mux.HandleFunc("POST /api/subscribe/{planID}", requireAPIAuth(apiSubscribeHandler))
+	mux.HandleFunc("POST /api/bookings", requireAPIAuth(apiCreateBookingHandler))
+	mux.HandleFunc("POST /api/bookings/{id}/pay", requireAPIAuth(apiPayBookingHandler))
+	mux.HandleFunc("GET /api/bookings", requireAPIAuth(apiMyBookingsHandler))
+	mux.HandleFunc("OPTIONS /api/", withCORS(func(w http.ResponseWriter, r *http.Request) {}))
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
