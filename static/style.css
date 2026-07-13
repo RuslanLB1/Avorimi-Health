@@ -16,12 +16,15 @@
 
 * { box-sizing: border-box; }
 
+html { overflow-x: hidden; }
 body {
   margin: 0;
   font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--ink);
   line-height: 1.5;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .container {
@@ -648,4 +651,15 @@ input:disabled { background: var(--bg); color: var(--muted); }
   .profile-btn-name { display: none; }
   .form-row { flex-direction: column; }
   .filters-bar { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .container { padding: 0 14px; }
+  .header-inner { flex-wrap: wrap; height: auto; padding: 10px 0; row-gap: 8px; }
+  .logo { font-size: 17px; }
+  .header-actions { gap: 6px; flex-wrap: wrap; }
+  .lang-form { order: 3; }
+  .lang-switch { font-size: 12px; padding: 5px 6px; }
+  .btn-sm { padding: 7px 12px; font-size: 12.5px; }
+  .profile-btn { padding: 5px 10px 5px 5px; gap: 6px; }
 }
