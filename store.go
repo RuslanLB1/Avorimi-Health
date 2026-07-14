@@ -101,12 +101,14 @@ type UserSubscription struct {
 
 // User — зарегистрированный аккаунт платформы.
 type User struct {
-	ID           int
-	IIN          string
-	FullName     string
-	Phone        string
-	PasswordHash string
-	CreatedAt    time.Time
+	ID             int
+	IIN            string
+	FullName       string
+	Phone          string
+	PasswordHash   string
+	CreatedAt      time.Time
+	ConsentAt      time.Time // когда пользователь принял соглашения
+	ConsentVersion string    // версия документов на момент согласия (см. consentVersion в handlers.go)
 }
 
 // Store — простое потокобезопасное in-memory хранилище для демо-прототипа.
@@ -466,19 +468,21 @@ func (s *Store) GetPlan(id int) (*SubscriptionPlan, bool) {
 
 // --- Пользователи ---
 
-func (s *Store) CreateUser(iin, fullName, phone, passwordHash string) (*User, error) {
+func (s *Store) CreateUser(iin, fullName, phone, passwordHash, consentVersion string) (*User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, exists := s.usersByPhone[phone]; exists {
 		return nil, fmt.Errorf("пользователь с таким номером телефона уже зарегистрирован")
 	}
 	u := &User{
-		ID:           s.nextUserID,
-		IIN:          iin,
-		FullName:     fullName,
-		Phone:        phone,
-		PasswordHash: passwordHash,
-		CreatedAt:    time.Now(),
+		ID:             s.nextUserID,
+		IIN:            iin,
+		FullName:       fullName,
+		Phone:          phone,
+		PasswordHash:   passwordHash,
+		CreatedAt:      time.Now(),
+		ConsentAt:      time.Now(),
+		ConsentVersion: consentVersion,
 	}
 	s.users[u.ID] = u
 	s.usersByPhone[phone] = u.ID

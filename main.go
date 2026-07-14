@@ -96,6 +96,8 @@ func main() {
 	mux.HandleFunc("GET /results", requireAuth(resultsHandler))
 
 	mux.HandleFunc("GET /set-lang", setLangHandler)
+	mux.HandleFunc("GET /terms", termsHandler)
+	mux.HandleFunc("GET /privacy", privacyHandler)
 
 	// JSON API для мобильного приложения (React Native / Expo).
 	mux.HandleFunc("POST /api/register", withCORS(apiRegisterHandler))

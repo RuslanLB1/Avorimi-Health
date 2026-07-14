@@ -81,6 +81,8 @@ type registerRequest struct {
 	PhoneLocal      string `json:"phoneLocal"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmPassword"`
+	AcceptTerms     bool   `json:"acceptTerms"`
+	AcceptPdn       bool   `json:"acceptPdn"`
 }
 
 func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +94,14 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	req.FullName = strings.TrimSpace(req.FullName)
 	if req.FullName == "" {
 		writeErr(w, http.StatusBadRequest, "err.fillFullName")
+		return
+	}
+	if !req.AcceptTerms {
+		writeErr(w, http.StatusBadRequest, "err.mustAcceptTerms")
+		return
+	}
+	if !req.AcceptPdn {
+		writeErr(w, http.StatusBadRequest, "err.mustAcceptPdn")
 		return
 	}
 	phone, err := buildPhone(req.PhoneLocal)
@@ -116,7 +126,7 @@ func apiRegisterHandler(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "err.generic")
 		return
 	}
-	user, err := store.CreateUser(req.IIN, req.FullName, phone, hash)
+	user, err := store.CreateUser(req.IIN, req.FullName, phone, hash, currentPolicyVersion)
 	if err != nil {
 		writeErr(w, http.StatusConflict, "err.phoneTaken")
 		return

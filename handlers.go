@@ -16,10 +16,10 @@ import (
 // storeErrorKeys сопоставляет русскоязычные ошибки store.go с ключами переводов,
 // чтобы сообщения об ошибках тоже показывались на выбранном языке интерфейса.
 var storeErrorKeys = map[string]string{
-	"слот недоступен":                             "err.slotUnavailable",
-	"услуга не найдена":                           "err.itemNotFound",
+	"слот недоступен":   "err.slotUnavailable",
+	"услуга не найдена": "err.itemNotFound",
 	"нет активной подписки с доступными визитами": "err.noActiveSubscription",
-	"план не найден":                               "err.planNotFound",
+	"план не найден": "err.planNotFound",
 }
 
 func bookingErrorKey(err error) string {
@@ -352,6 +352,14 @@ func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		fail("err.fillFullName")
 		return
 	}
+	if r.FormValue("accept_terms") != "on" {
+		fail("err.mustAcceptTerms")
+		return
+	}
+	if r.FormValue("accept_pdn") != "on" {
+		fail("err.mustAcceptPdn")
+		return
+	}
 	phone, err := buildPhone(r.FormValue("phone_local"))
 	if err != nil {
 		fail(err.Error())
@@ -375,7 +383,7 @@ func registerSubmitHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "не удалось создать аккаунт", http.StatusInternalServerError)
 		return
 	}
-	user, err := store.CreateUser(iin, fullName, phone, hash)
+	user, err := store.CreateUser(iin, fullName, phone, hash, currentPolicyVersion)
 	if err != nil {
 		fail("err.phoneTaken")
 		return
@@ -458,10 +466,10 @@ func bookingFormHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	_, hasSub := store.ActiveSubscription(user.ID)
 
 	render(w, r, "book.html", map[string]any{
-		"Item":  item,
-		"Slot":  slot,
+		"Item":   item,
+		"Slot":   slot,
 		"HasSub": hasSub,
-		"Error": r.URL.Query().Get("error"),
+		"Error":  r.URL.Query().Get("error"),
 	})
 }
 

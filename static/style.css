@@ -661,6 +661,23 @@ input:disabled { background: var(--bg); color: var(--muted); }
 
 .bookings-list { display: flex; flex-direction: column; gap: 14px; }
 
+/* Legal pages */
+.legal-page h2 { font-size: 18px; margin-top: 28px; margin-bottom: 10px; }
+.legal-page p, .legal-page li { color: var(--ink); font-size: 14.5px; line-height: 1.7; }
+.legal-page ul { padding-left: 20px; margin: 10px 0; }
+.legal-page li { margin-bottom: 8px; }
+
+.consent-box { margin: 16px 0; }
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.consent-row input[type="checkbox"] { margin-top: 3px; width: 17px; height: 17px; flex-shrink: 0; }
+.consent-row label { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.consent-row a { color: var(--purple); font-weight: 600; }
+
 /* Footer */
 .site-footer {
   border-top: 1px solid var(--border);

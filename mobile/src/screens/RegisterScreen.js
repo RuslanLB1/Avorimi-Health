@@ -1,8 +1,21 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Linking,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../api";
 import { colors } from "../theme";
 import { useAuth } from "../AuthContext";
+
+const WEB_BASE = "https://avorimi-health.onrender.com";
 
 export default function RegisterScreen({ navigation }) {
   const { signIn } = useAuth();
@@ -11,9 +24,19 @@ export default function RegisterScreen({ navigation }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPdn, setAcceptPdn] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function submit() {
+    if (!acceptTerms) {
+      Alert.alert("Нужно согласие", "Примите Пользовательское соглашение и Политику конфиденциальности");
+      return;
+    }
+    if (!acceptPdn) {
+      Alert.alert("Нужно согласие", "Дайте согласие на обработку персональных данных");
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.register({
@@ -22,6 +45,8 @@ export default function RegisterScreen({ navigation }) {
         phoneLocal: phone,
         password,
         confirmPassword: confirm,
+        acceptTerms,
+        acceptPdn,
       });
       await signIn(res.token, res.user);
       navigation.goBack();
@@ -66,6 +91,28 @@ export default function RegisterScreen({ navigation }) {
         onChangeText={setConfirm}
       />
 
+      <ConsentRow
+        checked={acceptTerms}
+        onToggle={() => setAcceptTerms((v) => !v)}
+        text={
+          <>
+            Я принимаю{" "}
+            <Text style={styles.link} onPress={() => Linking.openURL(WEB_BASE + "/terms")}>
+              Пользовательское соглашение
+            </Text>{" "}
+            и{" "}
+            <Text style={styles.link} onPress={() => Linking.openURL(WEB_BASE + "/privacy")}>
+              Политику конфиденциальности
+            </Text>
+          </>
+        }
+      />
+      <ConsentRow
+        checked={acceptPdn}
+        onToggle={() => setAcceptPdn((v) => !v)}
+        text="Даю согласие на обработку персональных данных, включая ИИН, в целях записи на приём и ведения истории обследований"
+      />
+
       <TouchableOpacity style={styles.button} onPress={submit} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Зарегистрироваться</Text>}
       </TouchableOpacity>
@@ -74,6 +121,20 @@ export default function RegisterScreen({ navigation }) {
         <Text style={styles.link}>Уже есть аккаунт? Войти</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function ConsentRow({ checked, onToggle, text }) {
+  return (
+    <TouchableOpacity style={styles.consentRow} activeOpacity={0.7} onPress={onToggle}>
+      <Ionicons
+        name={checked ? "checkbox" : "square-outline"}
+        size={20}
+        color={checked ? colors.purple : colors.faint}
+        style={{ marginTop: 1 }}
+      />
+      <Text style={styles.consentText}>{text}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -113,7 +174,9 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 15,
   },
+  consentRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12 },
+  consentText: { flex: 1, fontSize: 12.5, color: colors.muted, lineHeight: 18 },
   button: { backgroundColor: colors.purple, borderRadius: 14, padding: 16, alignItems: "center", marginTop: 8 },
   buttonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  link: { color: colors.purple, textAlign: "center", marginTop: 18, fontWeight: "600" },
+  link: { color: colors.purple, fontWeight: "700" },
 });

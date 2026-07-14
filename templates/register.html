@@ -26,6 +26,18 @@
     <label>{{t .Lang "register.confirmPassword"}}
       <input type="password" name="confirm_password" required minlength="6">
     </label>
+
+    <div class="consent-box">
+      <div class="consent-row">
+        <input type="checkbox" id="accept_terms" name="accept_terms" required>
+        <label for="accept_terms">{{t .Lang "register.acceptTermsPre"}} <a href="/terms" target="_blank">{{t .Lang "register.termsLink"}}</a> {{t .Lang "register.and"}} <a href="/privacy" target="_blank">{{t .Lang "register.privacyLink"}}</a></label>
+      </div>
+      <div class="consent-row">
+        <input type="checkbox" id="accept_pdn" name="accept_pdn" required>
+        <label for="accept_pdn">{{t .Lang "register.acceptPdn"}}</label>
+      </div>
+    </div>
+
     <button type="submit" class="btn btn-primary btn-block">{{t .Lang "register.submit"}}</button>
   </form>
 
