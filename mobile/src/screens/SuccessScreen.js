@@ -1,29 +1,33 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { colors } from "../theme";
+import { View, Text, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, gradients } from "../theme";
+import GradientButton from "../components/GradientButton";
 
 export default function SuccessScreen({ route, navigation }) {
-  const { item, clinicName } = route.params;
+  const { item, clinicName, freeBySubscription } = route.params;
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.icon}>✅</Text>
+      <LinearGradient colors={gradients.teal} style={styles.icon}>
+        <Ionicons name="checkmark" size={40} color="#fff" />
+      </LinearGradient>
       <Text style={styles.title}>Вы записаны!</Text>
       <Text style={styles.meta}>{item.Name} · {clinicName}</Text>
-      <TouchableOpacity
-        style={styles.button}
+      {freeBySubscription ? <Text style={styles.subNote}>Списано по подписке</Text> : null}
+      <GradientButton
+        title="На главную"
         onPress={() => navigation.popToTop()}
-      >
-        <Text style={styles.buttonText}>На главную</Text>
-      </TouchableOpacity>
+        style={{ marginTop: 28, width: 220 }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: 20 },
-  icon: { fontSize: 56, marginBottom: 12 },
+  icon: { width: 84, height: 84, borderRadius: 42, alignItems: "center", justifyContent: "center", marginBottom: 16 },
   title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   meta: { fontSize: 14, color: colors.muted, marginTop: 8, textAlign: "center" },
-  button: { backgroundColor: colors.purple, borderRadius: 14, padding: 16, paddingHorizontal: 28, marginTop: 24 },
-  buttonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  subNote: { fontSize: 12.5, color: colors.teal, fontWeight: "700", marginTop: 6 },
 });

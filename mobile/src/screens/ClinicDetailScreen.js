@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../api";
-import { colors } from "../theme";
+import { colors, radius, shadow } from "../theme";
+import { SkeletonCard } from "../components/Skeleton";
+import Badge from "../components/Badge";
 
 export default function ClinicDetailScreen({ route, navigation }) {
   const { clinicId, name } = route.params;
@@ -12,44 +15,53 @@ export default function ClinicDetailScreen({ route, navigation }) {
     api.clinicDetail(clinicId).then(setData);
   }, [clinicId]);
 
-  if (!data) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.purple} size="large" />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.screen}>
-      <View style={styles.info}>
-        <Text style={styles.address}>{data.clinic.Address}</Text>
-        <Text style={styles.meta}>⭐ {data.clinic.Rating} · {data.clinic.Description}</Text>
-      </View>
+      {data && (
+        <View style={styles.info}>
+          <View style={styles.infoRow}>
+            <Ionicons name="location" size={15} color={colors.muted} />
+            <Text style={styles.address}>{data.clinic.Address}</Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+            <Badge label={`⭐ ${data.clinic.Rating}`} tone="gold" />
+            <Badge label={`${data.categories.length} направлений`} tone="purple" />
+          </View>
+          <Text style={styles.desc}>{data.clinic.Description}</Text>
+        </View>
+      )}
       <FlatList
-        data={data.categories}
-        keyExtractor={(c) => c.Category}
+        data={data ? data.categories : Array.from({ length: 6 })}
+        keyExtractor={(c, i) => (c ? c.Category : String(i))}
         contentContainerStyle={{ padding: 16, gap: 12 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate("Category", {
-                clinicId,
-                clinicName: name,
-                category: item.Category,
-              })
-            }
-          >
-            <Text style={styles.emoji}>{item.Emoji}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.Category}</Text>
-              <Text style={styles.cardMeta}>
-                {item.Count} специалиста · от {item.MinPrice.toLocaleString("ru-RU")} ₸ · ⭐ {item.MaxRating}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) =>
+          !data ? (
+            <SkeletonCard />
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.card}
+              onPress={() =>
+                navigation.navigate("Category", {
+                  clinicId,
+                  clinicName: name,
+                  category: item.Category,
+                })
+              }
+            >
+              <View style={styles.emojiWrap}>
+                <Text style={styles.emoji}>{item.Emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>{item.Category}</Text>
+                <Text style={styles.cardMeta}>
+                  {item.Count} специалиста · от {item.MinPrice.toLocaleString("ru-RU")} ₸ · ⭐ {item.MaxRating}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+            </TouchableOpacity>
+          )
+        }
       />
     </View>
   );
@@ -57,21 +69,30 @@ export default function ClinicDetailScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
-  info: { padding: 16, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
+  info: { padding: 20, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   address: { fontSize: 14, color: colors.ink, fontWeight: "600" },
-  meta: { fontSize: 12.5, color: colors.muted, marginTop: 4 },
+  desc: { fontSize: 12.5, color: colors.muted, marginTop: 10 },
   card: {
     flexDirection: "row",
     gap: 12,
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radius.lg,
+    padding: 14,
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadow.soft,
   },
-  emoji: { fontSize: 26 },
+  emojiWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: "#f1edff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emoji: { fontSize: 22 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: colors.ink },
   cardMeta: { fontSize: 12, color: colors.muted, marginTop: 2 },
 });

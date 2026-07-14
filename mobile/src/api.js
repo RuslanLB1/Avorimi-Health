@@ -36,4 +36,5 @@ export const api = {
     request("/bookings", { method: "POST", token, body: { slotId, useSubscription } }),
   payBooking: (id, token) => request(`/bookings/${id}/pay`, { method: "POST", token }),
   myBookings: (token) => request("/bookings", { token }),
+  results: (token) => request("/results", { token }),
 };
