@@ -110,6 +110,7 @@ func main() {
 	mux.HandleFunc("POST /api/bookings", requireAPIAuth(apiCreateBookingHandler))
 	mux.HandleFunc("POST /api/bookings/{id}/pay", requireAPIAuth(apiPayBookingHandler))
 	mux.HandleFunc("GET /api/bookings", requireAPIAuth(apiMyBookingsHandler))
+	mux.HandleFunc("GET /api/results", requireAPIAuth(apiResultsHandler))
 	mux.HandleFunc("OPTIONS /api/", withCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	port := os.Getenv("PORT")

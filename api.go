@@ -329,3 +329,21 @@ func apiMyBookingsHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	}
 	writeJSON(w, http.StatusOK, views)
 }
+
+// --- Анализы / результаты ---
+
+type apiLabResultView struct {
+	Booking *Booking `json:"booking"`
+	Item    *Item    `json:"item"`
+	Slot    *Slot    `json:"slot"`
+	Ready   bool     `json:"ready"`
+}
+
+func apiResultsHandler(w http.ResponseWriter, r *http.Request, user *User) {
+	results := labResultsForUser(user.ID)
+	views := make([]apiLabResultView, 0, len(results))
+	for _, lr := range results {
+		views = append(views, apiLabResultView{Booking: lr.Booking, Item: lr.Item, Slot: lr.Slot, Ready: lr.Ready})
+	}
+	writeJSON(w, http.StatusOK, views)
+}
