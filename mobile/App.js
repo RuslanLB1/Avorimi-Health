@@ -7,6 +7,7 @@ import { colors } from "./src/theme";
 import { AuthProvider } from "./src/AuthContext";
 import { FavoritesProvider } from "./src/FavoritesContext";
 
+import HomeScreen from "./src/screens/HomeScreen";
 import ClinicsScreen from "./src/screens/ClinicsScreen";
 import ClinicDetailScreen from "./src/screens/ClinicDetailScreen";
 import CategoryScreen from "./src/screens/CategoryScreen";
@@ -98,7 +99,8 @@ export default function App() {
       <FavoritesProvider>
         <NavigationContainer>
           <StatusBar style="dark" />
-          <RootStack.Navigator screenOptions={screenOptions}>
+          <RootStack.Navigator screenOptions={screenOptions} initialRouteName="Home">
+            <RootStack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
             <RootStack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
             <RootStack.Screen name="Login" component={LoginScreen} options={{ title: "Вход", presentation: "modal" }} />
             <RootStack.Screen name="Register" component={RegisterScreen} options={{ title: "Регистрация", presentation: "modal" }} />

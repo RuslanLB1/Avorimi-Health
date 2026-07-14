@@ -2,7 +2,8 @@ import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from "react-nat
 import { LinearGradient } from "expo-linear-gradient";
 import { gradients, radius } from "../theme";
 
-export default function GradientButton({ title, onPress, loading, disabled, style, colors }) {
+export default function GradientButton({ title, onPress, loading, disabled, style, colors, textColor }) {
+  const color = textColor || "#fff";
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -16,7 +17,7 @@ export default function GradientButton({ title, onPress, loading, disabled, styl
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.text}>{title}</Text>}
+        {loading ? <ActivityIndicator color={color} /> : <Text style={[styles.text, { color }]}>{title}</Text>}
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -25,6 +26,6 @@ export default function GradientButton({ title, onPress, loading, disabled, styl
 const styles = StyleSheet.create({
   wrap: { borderRadius: radius.md, overflow: "hidden" },
   gradient: { paddingVertical: 16, alignItems: "center", justifyContent: "center" },
-  text: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  text: { fontWeight: "700", fontSize: 15 },
   disabled: { opacity: 0.6 },
 });

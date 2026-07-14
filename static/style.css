@@ -55,6 +55,15 @@ a { color: inherit; text-decoration: none; }
   font-weight: 800;
   color: var(--ink);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 .logo span {
   background: var(--gradient);
@@ -184,6 +193,23 @@ a { color: inherit; text-decoration: none; }
   grid-template-columns: 1.2fr 0.8fr;
   gap: 40px;
   align-items: center;
+}
+.hero-badge {
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: 0 20px 40px rgba(90, 60, 200, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  animation: hero-badge-float 4s ease-in-out infinite;
+}
+.hero-badge img { width: 60px; height: 60px; border-radius: 14px; }
+@keyframes hero-badge-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 .hero-text h1 {
   font-size: 44px;
