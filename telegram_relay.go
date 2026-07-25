@@ -71,8 +71,10 @@ type tgUpdatesResponse struct {
 }
 
 type tgSendResponse struct {
-	OK     bool      `json:"ok"`
-	Result tgMessage `json:"result"`
+	OK          bool      `json:"ok"`
+	Result      tgMessage `json:"result"`
+	ErrorCode   int       `json:"error_code,omitempty"`
+	Description string    `json:"description,omitempty"`
 }
 
 // forwardSupportQuestionToTelegram пересылает вопрос пользователя админу и
@@ -170,16 +172,20 @@ func sendTelegramMedia(method, field, fileURL, caption string) (*tgSendResponse,
 	}
 	defer resp.Body.Close()
 	var parsed tgSendResponse
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil || !parsed.OK {
-		return nil, fmt.Errorf("telegram: не удалось отправить вложение")
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, fmt.Errorf("telegram: некорректный ответ: %v", err)
+	}
+	if !parsed.OK {
+		return nil, fmt.Errorf("telegram %s: %s (код %d)", method, parsed.Description, parsed.ErrorCode)
 	}
 	return &parsed, nil
 }
 
 // forwardSupportAttachmentToTelegram пересылает вложение зарегистрированного
 // пользователя админу тем же способом, что и текстовые вопросы — регистрируя
-// релей, чтобы Reply на него ушёл обратно в чат пользователя.
-func forwardSupportAttachmentToTelegram(user *User, kind, fileURL, caption string) {
+// релей, чтобы Reply на него ушёл обратно в чат пользователя. Вызывается
+// синхронно из api.go, чтобы пользователь узнал, если доставка не удалась.
+func forwardSupportAttachmentToTelegram(user *User, kind, fileURL, caption string) error {
 	method, field := telegramMediaMethod(kind)
 	header := fmt.Sprintf("📎 Вложение в поддержку от %s (%s)", user.FullName, user.Phone)
 	full := header
@@ -189,14 +195,15 @@ func forwardSupportAttachmentToTelegram(user *User, kind, fileURL, caption strin
 	full += "\n\n— Ответьте на это сообщение (Reply), чтобы ответ ушёл пользователю в чат."
 	parsed, err := sendTelegramMedia(method, field, fileURL, full)
 	if err != nil {
-		log.Printf("[telegram-relay] не удалось переслать вложение: %v", err)
-		return
+		log.Printf("[telegram-relay] не удалось переслать вложение (kind=%s): %v", kind, err)
+		return err
 	}
 	store.RegisterRelay(parsed.Result.MessageID, user.ID)
+	return nil
 }
 
 // forwardGuestAttachmentToTelegram — то же самое для гостя без аккаунта.
-func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, fileURL, caption string) {
+func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, fileURL, caption string) error {
 	method, field := telegramMediaMethod(kind)
 	header := fmt.Sprintf("🆘 Вложение без аккаунта от %s (%s)", name, contact)
 	full := header
@@ -206,10 +213,11 @@ func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, fileURL, cap
 	full += "\n\n— Ответьте на это сообщение (Reply), ответ уйдёт прямо в чат на сайте."
 	parsed, err := sendTelegramMedia(method, field, fileURL, full)
 	if err != nil {
-		log.Printf("[telegram-relay] не удалось переслать гостевое вложение: %v", err)
-		return
+		log.Printf("[telegram-relay] не удалось переслать гостевое вложение (kind=%s): %v", kind, err)
+		return err
 	}
 	store.RegisterGuestRelay(parsed.Result.MessageID, guestID)
+	return nil
 }
 
 // notifyTelegramRelayable — как notifyTelegram, но дополнительно регистрирует

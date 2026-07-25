@@ -706,20 +706,6 @@ func (s *Store) SupportMessagesForUser(userID int) []*SupportMessage {
 	return []*SupportMessage{}
 }
 
-// SupportMessagesToday считает сообщения пользователя (роль user) за последние 24 часа.
-func (s *Store) SupportMessagesToday(userID int) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	since := time.Now().Add(-24 * time.Hour)
-	count := 0
-	for _, m := range s.supportMessages[userID] {
-		if m.Role == SupportRoleUser && m.CreatedAt.After(since) {
-			count++
-		}
-	}
-	return count
-}
-
 // RegisterRelay запоминает, какому пользователю соответствует пересланное в
 // Telegram сообщение, чтобы связать ответ администратора (Reply) с чатом.
 func (s *Store) RegisterRelay(telegramMessageID, userID int) {

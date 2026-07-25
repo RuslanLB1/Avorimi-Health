@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -393,8 +394,6 @@ func apiResultsHandler(w http.ResponseWriter, r *http.Request, user *User) {
 
 // --- Поддержка (чат-бот) ---
 
-const freeSupportMessagesPerDay = 20
-
 type supportAttachmentView struct {
 	URL  string `json:"url"`
 	Name string `json:"name"`
@@ -475,11 +474,6 @@ func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *
 		writeErr(w, http.StatusBadRequest, "err.supportBodyRequired")
 		return
 	}
-	_, hasSub := store.ActiveSubscription(user.ID)
-	if !hasSub && store.SupportMessagesToday(user.ID) >= freeSupportMessagesPerDay {
-		writeErr(w, http.StatusTooManyRequests, "err.supportLimitReached")
-		return
-	}
 
 	// Явный ответ на конкретное сообщение (в т.ч. на старое, из вчерашнего
 	// разговора) — находим его текст, чтобы процитировать в Telegram: так
@@ -516,8 +510,12 @@ func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *
 			caption = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Body)
 		}
 		fileURL := publicOrigin(r) + "/api/support/uploads/" + req.AttachmentUploadID
-		go forwardSupportAttachmentToTelegram(user, req.AttachmentKind, fileURL, caption)
-		replyText = "Файл передан оператору — он ответит здесь же, в чате."
+		if err := forwardSupportAttachmentToTelegram(user, req.AttachmentKind, fileURL, caption); err != nil {
+			log.Printf("[support] не удалось передать вложение оператору: %v", err)
+			replyText = "Не получилось передать файл оператору: " + err.Error()
+		} else {
+			replyText = "Файл передан оператору — он ответит здесь же, в чате."
+		}
 	} else if replyToBody != "" {
 		// Ответ на конкретное сообщение всегда уходит напрямую оператору с
 		// цитатой — это не часть кнопочного меню, текущий шаг гид-бота не трогаем.
@@ -623,7 +621,10 @@ func apiGuestSupportHandler(w http.ResponseWriter, r *http.Request) {
 			caption = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Message)
 		}
 		fileURL := publicOrigin(r) + "/api/support/uploads/" + req.AttachmentUploadID
-		go forwardGuestAttachmentToTelegram(guestID, gc.Name, gc.Contact, req.AttachmentKind, fileURL, caption)
+		if err := forwardGuestAttachmentToTelegram(guestID, gc.Name, gc.Contact, req.AttachmentKind, fileURL, caption); err != nil {
+			log.Printf("[support] не удалось передать гостевое вложение оператору: %v", err)
+			store.AddGuestMessage(guestID, &SupportMessage{Role: SupportRoleAssistant, Body: "Не получилось передать файл оператору: " + err.Error()})
+		}
 	} else {
 		question := req.Message
 		if replyToBody != "" {

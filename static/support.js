@@ -416,9 +416,9 @@
           sending = false;
           load();
         })
-        .catch(function (e) {
+        .catch(function () {
           sending = false;
-          showError(e.message === "err.supportLimitReached" ? "Дневной лимит сообщений исчерпан — попробуйте завтра." : "Не удалось отправить сообщение");
+          showError("Не удалось отправить сообщение");
         });
       return;
     }
