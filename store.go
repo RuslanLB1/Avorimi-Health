@@ -120,6 +120,16 @@ const (
 	SupportRoleAssistant SupportRole = "assistant"
 )
 
+// SupportAttachment — фото или документ, присланные оператором через Reply в
+// Telegram (см. telegram_relay.go). Файл не скачивается на сервер заранее —
+// FileID резолвится в содержимое "на лету" через apiSupportFileHandler,
+// когда пользователь открывает вложение в чате.
+type SupportAttachment struct {
+	FileID string
+	Name   string
+	Image  bool // true — показать превью <img>, false — карточка файла
+}
+
 // SupportMessage — одно сообщение в чате поддержки (гид-бот, свободный текст
 // или ответ оператора, прилетевший через Telegram-релей).
 type SupportMessage struct {
@@ -127,9 +137,10 @@ type SupportMessage struct {
 	UserID      int
 	Role        SupportRole
 	Body        string
-	Options     []string // кнопки быстрого ответа, приложенные к сообщению бота
-	ReplyToID   int       // ID сообщения, на которое отвечает пользователь (0 — не ответ)
-	ReplyToBody string    // снимок текста цитируемого сообщения на момент ответа
+	Options     []string            // кнопки быстрого ответа, приложенные к сообщению бота
+	Attachments []SupportAttachment // фото/файлы, присланные оператором из Telegram
+	ReplyToID   int                 // ID сообщения, на которое отвечает пользователь (0 — не ответ)
+	ReplyToBody string              // снимок текста цитируемого сообщения на момент ответа
 	CreatedAt   time.Time
 }
 

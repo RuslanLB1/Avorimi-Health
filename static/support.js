@@ -19,10 +19,14 @@
   var scriptEl = document.currentScript;
   var isLoggedIn = scriptEl && scriptEl.getAttribute("data-logged-in") === "1";
 
+  // Ровно та же строка, что closeChatTrigger в support_flow.go.
+  var CLOSE_CHAT_TRIGGER = "🔚 Завершить чат";
+
   var panel = document.getElementById("supportPanel");
   var toggle = document.getElementById("supportToggle");
   var closeBtn = document.getElementById("supportClose");
   var newChatBtn = document.getElementById("supportNewChat");
+  var endChatBtn = document.getElementById("supportEndChat");
   var body = document.getElementById("supportBody");
   var errorEl = document.getElementById("supportError");
   var input = document.getElementById("supportInput");
@@ -110,9 +114,48 @@
         row.appendChild(quote);
       }
 
-      var textEl = document.createElement("div");
-      textEl.innerHTML = esc(m.body).replace(/\n/g, "<br>");
-      row.appendChild(textEl);
+      if (m.body) {
+        var textEl = document.createElement("div");
+        textEl.innerHTML = esc(m.body).replace(/\n/g, "<br>");
+        row.appendChild(textEl);
+      }
+
+      if (m.attachments && m.attachments.length) {
+        m.attachments.forEach(function (att) {
+          var wrap = document.createElement("div");
+          wrap.className = "support-attachment";
+
+          if (att.image) {
+            var imgLink = document.createElement("a");
+            imgLink.href = att.url;
+            imgLink.target = "_blank";
+            imgLink.rel = "noopener";
+            var img = document.createElement("img");
+            img.src = att.url;
+            img.alt = att.name || "фото";
+            img.className = "support-attachment-img";
+            imgLink.appendChild(img);
+            wrap.appendChild(imgLink);
+          } else {
+            var fileLink = document.createElement("a");
+            fileLink.href = att.url;
+            fileLink.target = "_blank";
+            fileLink.rel = "noopener";
+            fileLink.className = "support-attachment-file";
+            fileLink.textContent = "📎 " + (att.name || "файл");
+            wrap.appendChild(fileLink);
+          }
+
+          var dl = document.createElement("a");
+          dl.href = att.url;
+          dl.download = att.name || "";
+          dl.className = "support-attachment-download";
+          dl.textContent = "⬇ Скачать";
+          wrap.appendChild(dl);
+
+          row.appendChild(wrap);
+        });
+      }
 
       if (m.options && m.options.length) {
         var optsWrap = document.createElement("div");
@@ -295,6 +338,11 @@
   });
   closeBtn.addEventListener("click", closePanel);
   newChatBtn.addEventListener("click", startNewChat);
+  if (endChatBtn) {
+    endChatBtn.addEventListener("click", function () {
+      send(CLOSE_CHAT_TRIGGER);
+    });
+  }
   replyCancelBtn.addEventListener("click", clearReplyTo);
   sendBtn.addEventListener("click", function () {
     send();

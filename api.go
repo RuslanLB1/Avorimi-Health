@@ -384,19 +384,30 @@ func apiResultsHandler(w http.ResponseWriter, r *http.Request, user *User) {
 
 const freeSupportMessagesPerDay = 20
 
+type supportAttachmentView struct {
+	URL   string `json:"url"`
+	Name  string `json:"name"`
+	Image bool   `json:"image"`
+}
+
 type supportMessageView struct {
-	ID          int       `json:"id"`
-	Role        string    `json:"role"`
-	Body        string    `json:"body"`
-	Options     []string  `json:"options,omitempty"`
-	ReplyToID   int       `json:"replyToId,omitempty"`
-	ReplyToBody string    `json:"replyToBody,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID          int                     `json:"id"`
+	Role        string                  `json:"role"`
+	Body        string                  `json:"body"`
+	Options     []string                `json:"options,omitempty"`
+	Attachments []supportAttachmentView `json:"attachments,omitempty"`
+	ReplyToID   int                     `json:"replyToId,omitempty"`
+	ReplyToBody string                  `json:"replyToBody,omitempty"`
+	CreatedAt   time.Time               `json:"createdAt"`
 }
 
 func toSupportMessageView(m *SupportMessage) supportMessageView {
+	atts := make([]supportAttachmentView, 0, len(m.Attachments))
+	for _, a := range m.Attachments {
+		atts = append(atts, supportAttachmentView{URL: "/api/support/files/" + a.FileID, Name: a.Name, Image: a.Image})
+	}
 	return supportMessageView{
-		ID: m.ID, Role: string(m.Role), Body: m.Body, Options: m.Options,
+		ID: m.ID, Role: string(m.Role), Body: m.Body, Options: m.Options, Attachments: atts,
 		ReplyToID: m.ReplyToID, ReplyToBody: m.ReplyToBody, CreatedAt: m.CreatedAt,
 	}
 }

@@ -20,12 +20,18 @@ const (
 	stageAwaitingRegFeedback     = "awaiting_reg_feedback"
 	stageAwaitingPaymentFeedback = "awaiting_payment_feedback"
 	stageAwaitingOperator        = "awaiting_operator"
-	// stageClosed — чат автоматически закрыт по неактивности (см.
-	// support_sweep.go). Следующее сообщение пользователя снова показывает
-	// приветствие с меню, как в самом начале, а не пытается его обработать
-	// в контексте старого диалога.
+	stageAwaitingCloseRating     = "awaiting_close_rating"
+	// stageClosed — чат закрыт (по неактивности, см. support_sweep.go, или
+	// кнопкой «Завершить чат»). Следующее сообщение пользователя снова
+	// показывает приветствие с меню, как в самом начале, а не пытается
+	// обработать его в контексте старого диалога.
 	stageClosed = "closed"
 )
+
+// closeChatTrigger — «виртуальная» кнопка «Завершить чат» в шапке виджета:
+// не часть основного меню, отправляется как обычное сообщение и ловится
+// в начале runSupportFlow независимо от текущего шага диалога.
+const closeChatTrigger = "🔚 Завершить чат"
 
 // mainMenuOptions — метки кнопок главного меню. Ровно эти же строки
 // использует static/support.js для синтетического приветствия при пустой
@@ -127,7 +133,25 @@ func runSupportFlow(user *User, stage, msg string) supportFlowOutcome {
 		return supportFlowOutcome{Reply: mainMenuGreeting(user)}
 	}
 
+	if choice == closeChatTrigger {
+		return supportFlowOutcome{Reply: supportBotResult{
+			Body:    "Прежде чем закрыть — оцените, пожалуйста, качество работы поддержки от 1 до 5 ⭐",
+			Options: ratingOptions, Stage: stageAwaitingCloseRating,
+		}}
+	}
+
 	switch stage {
+	case stageAwaitingCloseRating:
+		rating := extractRating(choice)
+		telegramBody := choice
+		if rating != "" {
+			telegramBody = fmt.Sprintf("Оценка при закрытии чата: %s/5\n\n%s", rating, choice)
+		}
+		go notifyTelegram(fmt.Sprintf("⭐ Оценка чата поддержки\nОт: %s (%s)\n\n%s", user.FullName, user.Phone, telegramBody))
+		return supportFlowOutcome{Reply: supportBotResult{
+			Body:  "Спасибо за оценку! Чат закрыт — если понадобится помощь снова, просто напишите 🙂",
+			Stage: stageClosed,
+		}}
 	case stageAwaitingReview:
 		rating := extractRating(choice)
 		telegramBody := choice

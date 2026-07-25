@@ -129,6 +129,7 @@ func main() {
 	mux.HandleFunc("POST /api/support/reset", requireSupportAuth(apiResetSupportChatHandler))
 	mux.HandleFunc("POST /api/support/guest", withCORS(apiGuestSupportHandler))
 	mux.HandleFunc("GET /api/support/guest/messages", withCORS(apiGuestMessagesHandler))
+	mux.HandleFunc("GET /api/support/files/{fileId}", withCORS(apiSupportFileHandler))
 
 	mux.HandleFunc("OPTIONS /api/", withCORS(func(w http.ResponseWriter, r *http.Request) {}))
 

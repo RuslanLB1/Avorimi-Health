@@ -6,10 +6,13 @@
         <strong>Поддержка Avorimi</strong>
         <span>Записи, оплата, регистрация</span>
       </div>
-      <div class="support-head-actions">
-        <button type="button" id="supportNewChat" title="Начать новый чат">🔄</button>
-        <button type="button" id="supportClose" aria-label="Закрыть">✕</button>
-      </div>
+      <button type="button" id="supportClose" class="support-head-close" aria-label="Свернуть">✕</button>
+    </div>
+    <div class="support-toolbar">
+      <button type="button" id="supportNewChat" class="support-toolbar-btn">🔄 Новый чат</button>
+      {{if .CurrentUser}}
+      <button type="button" id="supportEndChat" class="support-toolbar-btn support-toolbar-btn-end">✅ Завершить чат</button>
+      {{end}}
     </div>
     <div class="support-body" id="supportBody"></div>
     <div class="support-reply-preview" id="supportReplyPreview" hidden>
