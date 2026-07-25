@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -288,7 +290,16 @@ func apiSupportFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fileResp.Body.Close()
 
-	if ct := fileResp.Header.Get("Content-Type"); ct != "" {
+	// Файлы Telegram (особенно фото) часто отдаются с Content-Type:
+	// application/octet-stream — браузер может не показать превью <img>
+	// без явного image/*, поэтому досчитываем тип по расширению файла.
+	ct := fileResp.Header.Get("Content-Type")
+	if ct == "" || ct == "application/octet-stream" {
+		if guessed := mime.TypeByExtension(path.Ext(parsed.Result.FilePath)); guessed != "" {
+			ct = guessed
+		}
+	}
+	if ct != "" {
 		w.Header().Set("Content-Type", ct)
 	}
 	w.Header().Set("Cache-Control", "private, max-age=86400")
