@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // api.go — JSON-версия основных сценариев платформы для мобильного приложения
@@ -53,6 +55,26 @@ func apiUser(r *http.Request) (*User, bool) {
 func requireAPIAuth(next func(w http.ResponseWriter, r *http.Request, user *User)) http.HandlerFunc {
 	return withCORS(func(w http.ResponseWriter, r *http.Request) {
 		user, ok := apiUser(r)
+		if !ok {
+			writeErr(w, http.StatusUnauthorized, "err.unauthorized")
+			return
+		}
+		next(w, r, user)
+	})
+}
+
+// apiOrWebUser принимает и мобильное приложение (Bearer-токен), и сайт
+// (cookie-сессия) — чат поддержки встроен и туда, и туда на одних эндпоинтах.
+func apiOrWebUser(r *http.Request) (*User, bool) {
+	if user, ok := apiUser(r); ok {
+		return user, true
+	}
+	return currentUser(r)
+}
+
+func requireSupportAuth(next func(w http.ResponseWriter, r *http.Request, user *User)) http.HandlerFunc {
+	return withCORS(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := apiOrWebUser(r)
 		if !ok {
 			writeErr(w, http.StatusUnauthorized, "err.unauthorized")
 			return
@@ -354,6 +376,139 @@ func apiResultsHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	views := make([]apiLabResultView, 0, len(results))
 	for _, lr := range results {
 		views = append(views, apiLabResultView{Booking: lr.Booking, Item: lr.Item, Slot: lr.Slot, Ready: lr.Ready})
+	}
+	writeJSON(w, http.StatusOK, views)
+}
+
+// --- Поддержка (чат-бот) ---
+
+const freeSupportMessagesPerDay = 20
+
+type supportMessageView struct {
+	ID        int       `json:"id"`
+	Role      string    `json:"role"`
+	Body      string    `json:"body"`
+	Options   []string  `json:"options,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+func toSupportMessageView(m *SupportMessage) supportMessageView {
+	return supportMessageView{ID: m.ID, Role: string(m.Role), Body: m.Body, Options: m.Options, CreatedAt: m.CreatedAt}
+}
+
+func apiListSupportMessagesHandler(w http.ResponseWriter, r *http.Request, user *User) {
+	msgs := store.SupportMessagesForUser(user.ID)
+	views := make([]supportMessageView, 0, len(msgs))
+	for _, m := range msgs {
+		views = append(views, toSupportMessageView(m))
+	}
+	writeJSON(w, http.StatusOK, views)
+}
+
+type sendSupportMessageRequest struct {
+	Body string `json:"body"`
+}
+
+func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *User) {
+	var req sendSupportMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Body) == "" {
+		writeErr(w, http.StatusBadRequest, "err.supportBodyRequired")
+		return
+	}
+	_, hasSub := store.ActiveSubscription(user.ID)
+	if !hasSub && store.SupportMessagesToday(user.ID) >= freeSupportMessagesPerDay {
+		writeErr(w, http.StatusTooManyRequests, "err.supportLimitReached")
+		return
+	}
+
+	userMsg := store.AddSupportMessage(&SupportMessage{UserID: user.ID, Role: SupportRoleUser, Body: req.Body})
+
+	stage := store.SupportStage(user.ID)
+	outcome := runSupportFlow(user, stage, req.Body)
+
+	var replyText string
+	var replyOptions []string
+	if outcome.handled() {
+		replyText = outcome.Reply.Body
+		replyOptions = outcome.Reply.Options
+		store.SetSupportStage(user.ID, outcome.Reply.Stage)
+	} else {
+		// Свободный текст вне гид-бота — regex-классификатор (или Anthropic, если подключён).
+		history := store.SupportMessagesForUser(user.ID)
+		aiHistory := make([]AIMessage, 0, len(history))
+		for _, m := range history {
+			aiHistory = append(aiHistory, AIMessage{Role: m.Role, Body: m.Body})
+		}
+		text, err := ai.Reply(aiHistory, req.Body)
+		if err != nil {
+			text = "Не получилось получить ответ ассистента — попробуйте ещё раз чуть позже."
+		}
+		replyText = text
+		if feedbackRe.MatchString(req.Body) {
+			go notifyTelegramFeedback(user, req.Body)
+		}
+		if registrationTroubleRe.MatchString(req.Body) {
+			go notifyTelegramRelayable(user, fmt.Sprintf("🆘 Пользователь застрял на регистрации/входе\nОт: %s (%s)\n\n%s\n\n— Ответьте на это сообщение (Reply), ответ уйдёт пользователю в чат.", user.FullName, user.Phone, req.Body))
+		}
+		// Пока не подключён платный Anthropic API — дублируем вопрос админу в
+		// Telegram; Reply на это сообщение придёт пользователю как ответ поддержки.
+		go forwardSupportQuestionToTelegram(user, req.Body)
+	}
+
+	reply := store.AddSupportMessage(&SupportMessage{UserID: user.ID, Role: SupportRoleAssistant, Body: replyText, Options: replyOptions})
+	writeJSON(w, http.StatusCreated, map[string]any{"userMessage": toSupportMessageView(userMsg), "reply": toSupportMessageView(reply)})
+}
+
+type guestSupportRequest struct {
+	GuestID string `json:"guestId,omitempty"` // пусто при первом сообщении — сервер создаст новую сессию
+	Name    string `json:"name,omitempty"`
+	Contact string `json:"contact,omitempty"`
+	Message string `json:"message"`
+}
+
+// apiGuestSupportHandler — обращения в поддержку от тех, кто не может
+// зарегистрироваться/войти. Реального аккаунта нет, поэтому переписка живёт
+// в отдельном гостевом хранилище под сгенерированным guestID (фронт хранит
+// его в localStorage и опрашивает apiGuestMessagesHandler на новые ответы —
+// админ отвечает Reply'ем в Telegram, и это уходит прямо в чат на сайте.
+func apiGuestSupportHandler(w http.ResponseWriter, r *http.Request) {
+	var req guestSupportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Message) == "" {
+		writeErr(w, http.StatusBadRequest, "err.supportBodyRequired")
+		return
+	}
+	guestID := strings.TrimSpace(req.GuestID)
+	if guestID == "" {
+		guestID = newToken()[:24]
+	}
+
+	name := strings.TrimSpace(req.Name)
+	contact := strings.TrimSpace(req.Contact)
+	if name != "" || contact != "" {
+		store.SetGuestContact(guestID, name, contact)
+	}
+	gc, hasContact := store.GetGuestContact(guestID)
+	if !hasContact {
+		writeErr(w, http.StatusBadRequest, "err.supportContactRequired")
+		return
+	}
+
+	userMsg := store.AddGuestMessage(guestID, &SupportMessage{Role: SupportRoleUser, Body: req.Message})
+	go forwardGuestQuestionToTelegram(guestID, gc.Name, gc.Contact, req.Message)
+
+	writeJSON(w, http.StatusCreated, map[string]any{"guestId": guestID, "message": toSupportMessageView(userMsg)})
+}
+
+func apiGuestMessagesHandler(w http.ResponseWriter, r *http.Request) {
+	guestID := strings.TrimSpace(r.URL.Query().Get("guestId"))
+	if guestID == "" {
+		writeErr(w, http.StatusBadRequest, "err.supportGuestIDRequired")
+		return
+	}
+	msgs := store.GuestMessages(guestID)
+	views := make([]supportMessageView, 0, len(msgs))
+	for _, m := range msgs {
+		views = append(views, toSupportMessageView(m))
 	}
 	writeJSON(w, http.StatusOK, views)
 }

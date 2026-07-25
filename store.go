@@ -111,6 +111,31 @@ type User struct {
 	ConsentVersion string    // версия документов на момент согласия (см. consentVersion в handlers.go)
 }
 
+// --- Поддержка (чат-бот) ---
+
+type SupportRole string
+
+const (
+	SupportRoleUser      SupportRole = "user"
+	SupportRoleAssistant SupportRole = "assistant"
+)
+
+// SupportMessage — одно сообщение в чате поддержки (гид-бот, свободный текст
+// или ответ оператора, прилетевший через Telegram-релей).
+type SupportMessage struct {
+	ID        int
+	UserID    int
+	Role      SupportRole
+	Body      string
+	Options   []string // кнопки быстрого ответа, приложенные к сообщению бота
+	CreatedAt time.Time
+}
+
+type guestContact struct {
+	Name    string
+	Contact string
+}
+
 // Store — простое потокобезопасное in-memory хранилище для демо-прототипа.
 type Store struct {
 	mu            sync.Mutex
@@ -126,21 +151,39 @@ type Store struct {
 	nextBookingID int
 	nextSlotID    int
 	nextUserID    int
+
+	supportMessages map[int][]*SupportMessage // userID -> сообщения
+	nextSupportMsg  int
+	supportStage    map[int]string // userID -> текущий шаг гид-бота поддержки
+	relayPending    map[int]int    // telegram messageID -> userID, для человек-в-контуре поддержки
+
+	// Гостевая поддержка (без аккаунта, например застрял на регистрации) —
+	// тот же паттерн, но ключ сессии — сгенерированная строка, а не userID.
+	guestMessages     map[string][]*SupportMessage
+	nextGuestMsg      int
+	guestContacts     map[string]guestContact
+	guestRelayPending map[int]string // telegram messageID -> guestID
 }
 
 func NewStore() *Store {
 	s := &Store{
-		clinics:       map[int]*Clinic{},
-		items:         map[int]*Item{},
-		slots:         map[int]*Slot{},
-		bookings:      map[int]*Booking{},
-		plans:         map[int]*SubscriptionPlan{},
-		users:         map[int]*User{},
-		usersByPhone:  map[string]int{},
-		subscriptions: map[int]*UserSubscription{},
-		nextBookingID: 1,
-		nextSlotID:    1,
-		nextUserID:    1,
+		clinics:           map[int]*Clinic{},
+		items:             map[int]*Item{},
+		slots:             map[int]*Slot{},
+		bookings:          map[int]*Booking{},
+		plans:             map[int]*SubscriptionPlan{},
+		users:             map[int]*User{},
+		usersByPhone:      map[string]int{},
+		subscriptions:     map[int]*UserSubscription{},
+		nextBookingID:     1,
+		nextSlotID:        1,
+		nextUserID:        1,
+		supportMessages:   map[int][]*SupportMessage{},
+		supportStage:      map[int]string{},
+		relayPending:      map[int]int{},
+		guestMessages:     map[string][]*SupportMessage{},
+		guestContacts:     map[string]guestContact{},
+		guestRelayPending: map[int]string{},
 	}
 	s.seed()
 	return s
@@ -621,4 +664,117 @@ func (s *Store) BookingsByUser(userID int) []*Booking {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
 	return out
+}
+
+// --- Поддержка (чат-бот) ---
+
+func (s *Store) AddSupportMessage(m *SupportMessage) *SupportMessage {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.nextSupportMsg++
+	m.ID = s.nextSupportMsg
+	m.CreatedAt = time.Now()
+	s.supportMessages[m.UserID] = append(s.supportMessages[m.UserID], m)
+	return m
+}
+
+func (s *Store) SupportMessagesForUser(userID int) []*SupportMessage {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if msgs, ok := s.supportMessages[userID]; ok {
+		return msgs
+	}
+	return []*SupportMessage{}
+}
+
+// SupportMessagesToday считает сообщения пользователя (роль user) за последние 24 часа.
+func (s *Store) SupportMessagesToday(userID int) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	since := time.Now().Add(-24 * time.Hour)
+	count := 0
+	for _, m := range s.supportMessages[userID] {
+		if m.Role == SupportRoleUser && m.CreatedAt.After(since) {
+			count++
+		}
+	}
+	return count
+}
+
+// RegisterRelay запоминает, какому пользователю соответствует пересланное в
+// Telegram сообщение, чтобы связать ответ администратора (Reply) с чатом.
+func (s *Store) RegisterRelay(telegramMessageID, userID int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.relayPending[telegramMessageID] = userID
+}
+
+// ResolveRelay находит пользователя по ID сообщения в Telegram, на которое ответил администратор.
+func (s *Store) ResolveRelay(telegramMessageID int) (int, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	userID, ok := s.relayPending[telegramMessageID]
+	return userID, ok
+}
+
+func (s *Store) AddGuestMessage(guestID string, m *SupportMessage) *SupportMessage {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.nextGuestMsg++
+	m.ID = s.nextGuestMsg
+	m.CreatedAt = time.Now()
+	s.guestMessages[guestID] = append(s.guestMessages[guestID], m)
+	return m
+}
+
+func (s *Store) GuestMessages(guestID string) []*SupportMessage {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if msgs, ok := s.guestMessages[guestID]; ok {
+		return msgs
+	}
+	return []*SupportMessage{}
+}
+
+func (s *Store) SetGuestContact(guestID, name, contact string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.guestContacts[guestID] = guestContact{Name: name, Contact: contact}
+}
+
+func (s *Store) GetGuestContact(guestID string) (guestContact, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	gc, ok := s.guestContacts[guestID]
+	return gc, ok
+}
+
+func (s *Store) RegisterGuestRelay(telegramMessageID int, guestID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.guestRelayPending[telegramMessageID] = guestID
+}
+
+func (s *Store) ResolveGuestRelay(telegramMessageID int) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	guestID, ok := s.guestRelayPending[telegramMessageID]
+	return guestID, ok
+}
+
+// SupportStage возвращает текущий шаг гид-бота поддержки для пользователя ("" — меню).
+func (s *Store) SupportStage(userID int) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.supportStage[userID]
+}
+
+func (s *Store) SetSupportStage(userID int, stage string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if stage == "" {
+		delete(s.supportStage, userID)
+		return
+	}
+	s.supportStage[userID] = stage
 }

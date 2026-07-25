@@ -13,6 +13,7 @@ var (
 	store    *Store
 	sessions *SessionManager
 	payments PaymentProvider
+	ai       AIProvider
 	tmpl     *template.Template
 )
 
@@ -20,6 +21,12 @@ func main() {
 	store = NewStore()
 	sessions = NewSessionManager()
 	payments = MockProvider{}
+	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		ai = NewAnthropicProvider()
+	} else {
+		ai = MockAIProvider{}
+	}
+	startTelegramRelayPoller()
 
 	funcMap := template.FuncMap{
 		"money": func(v int) string {
@@ -113,6 +120,14 @@ func main() {
 	mux.HandleFunc("POST /api/bookings/{id}/pay", requireAPIAuth(apiPayBookingHandler))
 	mux.HandleFunc("GET /api/bookings", requireAPIAuth(apiMyBookingsHandler))
 	mux.HandleFunc("GET /api/results", requireAPIAuth(apiResultsHandler))
+
+	// Чат поддержки — доступен и с сайта (cookie-сессия), и из мобильного
+	// приложения (Bearer-токен), см. requireSupportAuth в api.go.
+	mux.HandleFunc("GET /api/support/messages", requireSupportAuth(apiListSupportMessagesHandler))
+	mux.HandleFunc("POST /api/support/messages", requireSupportAuth(apiSendSupportMessageHandler))
+	mux.HandleFunc("POST /api/support/guest", withCORS(apiGuestSupportHandler))
+	mux.HandleFunc("GET /api/support/guest/messages", withCORS(apiGuestMessagesHandler))
+
 	mux.HandleFunc("OPTIONS /api/", withCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	port := os.Getenv("PORT")
@@ -121,7 +136,7 @@ func main() {
 	}
 	addr := ":" + port
 	log.Printf("Avorimi Health запущен: http://localhost%s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, recoverMiddleware(mux)); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -1,0 +1,29 @@
+{{define "supportWidget"}}
+<div class="support-widget">
+  <div class="support-panel" id="supportPanel" hidden>
+    <div class="support-head">
+      <div>
+        <strong>Поддержка Avorimi</strong>
+        <span>Записи, оплата, регистрация</span>
+      </div>
+      <button type="button" id="supportClose" aria-label="Закрыть">✕</button>
+    </div>
+    <div class="support-body" id="supportBody"></div>
+    <div class="support-error" id="supportError" hidden></div>
+    <div class="support-foot">
+      {{if not .CurrentUser}}
+      <div class="support-guest-fields" id="supportGuestFields">
+        <input type="text" id="supportGuestName" placeholder="Ваше имя" maxlength="60">
+        <input type="text" id="supportGuestContact" placeholder="Телефон или email" maxlength="80">
+      </div>
+      {{end}}
+      <div class="support-input-row">
+        <input type="text" id="supportInput" placeholder="Написать в поддержку…" maxlength="1000">
+        <button type="button" id="supportSend">Отправить</button>
+      </div>
+    </div>
+  </div>
+  <button type="button" class="support-toggle" id="supportToggle" aria-label="Чат поддержки">💬</button>
+</div>
+<script src="/static/support.js" data-logged-in="{{if .CurrentUser}}1{{else}}0{{end}}" defer></script>
+{{end}}
