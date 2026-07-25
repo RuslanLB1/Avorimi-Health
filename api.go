@@ -25,6 +25,17 @@ func writeErr(w http.ResponseWriter, status int, key string) {
 	writeJSON(w, status, map[string]string{"error": key})
 }
 
+// publicOrigin строит абсолютный адрес нашего сервера для текущего запроса —
+// нужен, чтобы дать Telegram публичную ссылку на загруженное вложение
+// (Telegram сам скачивает файл по URL, а не принимает его лишь multipart'ом).
+func publicOrigin(r *http.Request) string {
+	proto := r.Header.Get("X-Forwarded-Proto")
+	if proto == "" {
+		proto = "https"
+	}
+	return proto + "://" + r.Host
+}
+
 func withCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -385,9 +396,9 @@ func apiResultsHandler(w http.ResponseWriter, r *http.Request, user *User) {
 const freeSupportMessagesPerDay = 20
 
 type supportAttachmentView struct {
-	URL   string `json:"url"`
-	Name  string `json:"name"`
-	Image bool   `json:"image"`
+	URL  string `json:"url"`
+	Name string `json:"name"`
+	Kind string `json:"kind"`
 }
 
 type supportMessageView struct {
@@ -404,7 +415,14 @@ type supportMessageView struct {
 func toSupportMessageView(m *SupportMessage) supportMessageView {
 	atts := make([]supportAttachmentView, 0, len(m.Attachments))
 	for _, a := range m.Attachments {
-		atts = append(atts, supportAttachmentView{URL: "/api/support/files/" + a.FileID, Name: a.Name, Image: a.Image})
+		url := ""
+		switch {
+		case a.FileID != "":
+			url = "/api/support/files/" + a.FileID
+		case a.UploadID != "":
+			url = "/api/support/uploads/" + a.UploadID
+		}
+		atts = append(atts, supportAttachmentView{URL: url, Name: a.Name, Kind: a.Kind})
 	}
 	return supportMessageView{
 		ID: m.ID, Role: string(m.Role), Body: m.Body, Options: m.Options, Attachments: atts,
@@ -444,13 +462,16 @@ func apiResetSupportChatHandler(w http.ResponseWriter, r *http.Request, user *Us
 }
 
 type sendSupportMessageRequest struct {
-	Body      string `json:"body"`
-	ReplyToID int    `json:"replyToId,omitempty"`
+	Body               string `json:"body"`
+	ReplyToID          int    `json:"replyToId,omitempty"`
+	AttachmentUploadID string `json:"attachmentUploadId,omitempty"`
+	AttachmentKind     string `json:"attachmentKind,omitempty"`
+	AttachmentName     string `json:"attachmentName,omitempty"`
 }
 
 func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *User) {
 	var req sendSupportMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Body) == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || (strings.TrimSpace(req.Body) == "" && req.AttachmentUploadID == "") {
 		writeErr(w, http.StatusBadRequest, "err.supportBodyRequired")
 		return
 	}
@@ -474,15 +495,30 @@ func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *
 		}
 	}
 
+	var attachments []SupportAttachment
+	if req.AttachmentUploadID != "" {
+		attachments = append(attachments, SupportAttachment{UploadID: req.AttachmentUploadID, Name: req.AttachmentName, Kind: req.AttachmentKind})
+	}
+
 	userMsg := store.AddSupportMessage(&SupportMessage{
-		UserID: user.ID, Role: SupportRoleUser, Body: req.Body,
+		UserID: user.ID, Role: SupportRoleUser, Body: req.Body, Attachments: attachments,
 		ReplyToID: req.ReplyToID, ReplyToBody: replyToBody,
 	})
 
 	var replyText string
 	var replyOptions []string
 
-	if replyToBody != "" {
+	if req.AttachmentUploadID != "" {
+		// Вложение всегда уходит напрямую оператору (фото/видео/голосовое/файл
+		// не укладываются в кнопочное меню) — текущий шаг гид-бота не трогаем.
+		caption := req.Body
+		if replyToBody != "" {
+			caption = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Body)
+		}
+		fileURL := publicOrigin(r) + "/api/support/uploads/" + req.AttachmentUploadID
+		go forwardSupportAttachmentToTelegram(user, req.AttachmentKind, fileURL, caption)
+		replyText = "Файл передан оператору — он ответит здесь же, в чате."
+	} else if replyToBody != "" {
 		// Ответ на конкретное сообщение всегда уходит напрямую оператору с
 		// цитатой — это не часть кнопочного меню, текущий шаг гид-бота не трогаем.
 		quoted := fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Body)
@@ -524,11 +560,14 @@ func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *
 }
 
 type guestSupportRequest struct {
-	GuestID   string `json:"guestId,omitempty"` // пусто при первом сообщении — сервер создаст новую сессию
-	Name      string `json:"name,omitempty"`
-	Contact   string `json:"contact,omitempty"`
-	Message   string `json:"message"`
-	ReplyToID int    `json:"replyToId,omitempty"`
+	GuestID            string `json:"guestId,omitempty"` // пусто при первом сообщении — сервер создаст новую сессию
+	Name               string `json:"name,omitempty"`
+	Contact            string `json:"contact,omitempty"`
+	Message            string `json:"message"`
+	ReplyToID          int    `json:"replyToId,omitempty"`
+	AttachmentUploadID string `json:"attachmentUploadId,omitempty"`
+	AttachmentKind     string `json:"attachmentKind,omitempty"`
+	AttachmentName     string `json:"attachmentName,omitempty"`
 }
 
 // apiGuestSupportHandler — обращения в поддержку от тех, кто не может
@@ -538,7 +577,7 @@ type guestSupportRequest struct {
 // админ отвечает Reply'ем в Telegram, и это уходит прямо в чат на сайте.
 func apiGuestSupportHandler(w http.ResponseWriter, r *http.Request) {
 	var req guestSupportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Message) == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || (strings.TrimSpace(req.Message) == "" && req.AttachmentUploadID == "") {
 		writeErr(w, http.StatusBadRequest, "err.supportBodyRequired")
 		return
 	}
@@ -568,16 +607,30 @@ func apiGuestSupportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var attachments []SupportAttachment
+	if req.AttachmentUploadID != "" {
+		attachments = append(attachments, SupportAttachment{UploadID: req.AttachmentUploadID, Name: req.AttachmentName, Kind: req.AttachmentKind})
+	}
+
 	userMsg := store.AddGuestMessage(guestID, &SupportMessage{
-		Role: SupportRoleUser, Body: req.Message,
+		Role: SupportRoleUser, Body: req.Message, Attachments: attachments,
 		ReplyToID: req.ReplyToID, ReplyToBody: replyToBody,
 	})
 
-	question := req.Message
-	if replyToBody != "" {
-		question = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Message)
+	if req.AttachmentUploadID != "" {
+		caption := req.Message
+		if replyToBody != "" {
+			caption = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Message)
+		}
+		fileURL := publicOrigin(r) + "/api/support/uploads/" + req.AttachmentUploadID
+		go forwardGuestAttachmentToTelegram(guestID, gc.Name, gc.Contact, req.AttachmentKind, fileURL, caption)
+	} else {
+		question := req.Message
+		if replyToBody != "" {
+			question = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Message)
+		}
+		go forwardGuestQuestionToTelegram(guestID, gc.Name, gc.Contact, question)
 	}
-	go forwardGuestQuestionToTelegram(guestID, gc.Name, gc.Contact, question)
 
 	writeJSON(w, http.StatusCreated, map[string]any{"guestId": guestID, "message": toSupportMessageView(userMsg)})
 }

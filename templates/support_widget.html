@@ -30,10 +30,39 @@
         <input type="text" id="supportGuestContact" placeholder="Телефон или email" maxlength="80">
       </div>
       {{end}}
-      <div class="support-input-row">
+
+      <div class="support-attach-preview" id="supportAttachPreview" hidden>
+        <span id="supportAttachPreviewName"></span>
+        <button type="button" id="supportAttachCancel" aria-label="Убрать вложение">✕</button>
+      </div>
+
+      <div class="support-recording" id="supportRecording" hidden>
+        <span class="support-recording-dot"></span>
+        <span id="supportRecordingTime">0:00</span>
+        <span class="support-recording-label">Запись голосового…</span>
+        <button type="button" id="supportRecordingStop">⏹ Готово</button>
+        <button type="button" id="supportRecordingCancel" aria-label="Отменить запись">✕</button>
+      </div>
+
+      <div class="support-input-row" id="supportInputRow">
+        <div class="support-attach-wrap">
+          <button type="button" id="supportAttachBtn" aria-label="Прикрепить файл">📎</button>
+          <div class="support-attach-menu" id="supportAttachMenu" hidden>
+            <button type="button" id="supportPickGallery">🖼 Фото</button>
+            <button type="button" id="supportPickCamera">📷 Сделать фото</button>
+            <button type="button" id="supportPickVideo">🎥 Видео</button>
+            <button type="button" id="supportPickFile">📄 Файл</button>
+          </div>
+        </div>
         <input type="text" id="supportInput" placeholder="Написать в поддержку…" maxlength="1000">
+        <button type="button" id="supportVoiceBtn" aria-label="Голосовое сообщение" title="Записать голосовое">🎤</button>
         <button type="button" id="supportSend">Отправить</button>
       </div>
+
+      <input type="file" id="supportFileGallery" accept="image/*" hidden>
+      <input type="file" id="supportFileCamera" accept="image/*" capture="environment" hidden>
+      <input type="file" id="supportFileVideo" accept="video/*" hidden>
+      <input type="file" id="supportFileAny" hidden>
     </div>
   </div>
   <button type="button" class="support-toggle" id="supportToggle" aria-label="Чат поддержки">💬</button>

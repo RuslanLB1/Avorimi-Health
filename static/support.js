@@ -38,11 +38,37 @@
   var replyPreviewBody = document.getElementById("supportReplyPreviewBody");
   var replyCancelBtn = document.getElementById("supportReplyCancel");
 
+  var attachBtn = document.getElementById("supportAttachBtn");
+  var attachMenu = document.getElementById("supportAttachMenu");
+  var pickGallery = document.getElementById("supportPickGallery");
+  var pickCamera = document.getElementById("supportPickCamera");
+  var pickVideo = document.getElementById("supportPickVideo");
+  var pickFile = document.getElementById("supportPickFile");
+  var fileGallery = document.getElementById("supportFileGallery");
+  var fileCamera = document.getElementById("supportFileCamera");
+  var fileVideo = document.getElementById("supportFileVideo");
+  var fileAny = document.getElementById("supportFileAny");
+  var attachPreview = document.getElementById("supportAttachPreview");
+  var attachPreviewName = document.getElementById("supportAttachPreviewName");
+  var attachCancelBtn = document.getElementById("supportAttachCancel");
+
+  var voiceBtn = document.getElementById("supportVoiceBtn");
+  var recordingBar = document.getElementById("supportRecording");
+  var recordingTime = document.getElementById("supportRecordingTime");
+  var recordingStopBtn = document.getElementById("supportRecordingStop");
+  var recordingCancelBtn = document.getElementById("supportRecordingCancel");
+
   var open = false;
   var sending = false;
   var pollTimer = null;
   var guestId = localStorage.getItem(GUEST_ID_KEY) || "";
   var replyTo = null; // {id, body} — сообщение, на которое отвечаем
+  var pendingAttachment = null; // {uploadId, kind, name}
+
+  var mediaRecorder = null;
+  var recordedChunks = [];
+  var recordingTimer = null;
+  var recordingSeconds = 0;
 
   function esc(s) {
     var d = document.createElement("div");
@@ -74,6 +100,87 @@
   function clearReplyTo() {
     replyTo = null;
     replyPreview.hidden = true;
+  }
+
+  function setPendingAttachment(att) {
+    pendingAttachment = att;
+    attachPreviewName.textContent = "📎 " + att.name;
+    attachPreview.hidden = false;
+  }
+
+  function clearPendingAttachment() {
+    pendingAttachment = null;
+    attachPreview.hidden = true;
+  }
+
+  function uploadFile(file) {
+    var form = new FormData();
+    form.append("file", file);
+    return fetch("/api/support/upload", { method: "POST", credentials: "same-origin", body: form }).then(function (r) {
+      if (!r.ok) throw new Error("Не удалось загрузить файл");
+      return r.json();
+    });
+  }
+
+  function pickAndUpload(input) {
+    var file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    showError("");
+    uploadFile(file)
+      .then(function (res) {
+        setPendingAttachment({ uploadId: res.uploadId, kind: res.kind, name: res.name || file.name });
+      })
+      .catch(function () {
+        showError("Не удалось загрузить файл");
+      });
+  }
+
+  function renderAttachment(att, row) {
+    var wrap = document.createElement("div");
+    wrap.className = "support-attachment";
+
+    if (att.kind === "image") {
+      var imgLink = document.createElement("a");
+      imgLink.href = att.url;
+      imgLink.target = "_blank";
+      imgLink.rel = "noopener";
+      var img = document.createElement("img");
+      img.src = att.url;
+      img.alt = att.name || "фото";
+      img.className = "support-attachment-img";
+      imgLink.appendChild(img);
+      wrap.appendChild(imgLink);
+    } else if (att.kind === "video") {
+      var video = document.createElement("video");
+      video.src = att.url;
+      video.controls = true;
+      video.className = "support-attachment-video";
+      wrap.appendChild(video);
+    } else if (att.kind === "audio") {
+      var audio = document.createElement("audio");
+      audio.src = att.url;
+      audio.controls = true;
+      audio.className = "support-attachment-audio";
+      wrap.appendChild(audio);
+    } else {
+      var fileLink = document.createElement("a");
+      fileLink.href = att.url;
+      fileLink.target = "_blank";
+      fileLink.rel = "noopener";
+      fileLink.className = "support-attachment-file";
+      fileLink.textContent = "📎 " + (att.name || "файл");
+      wrap.appendChild(fileLink);
+    }
+
+    var dl = document.createElement("a");
+    dl.href = att.url;
+    dl.download = att.name || "";
+    dl.className = "support-attachment-download";
+    dl.textContent = "⬇ Скачать";
+    wrap.appendChild(dl);
+
+    row.appendChild(wrap);
   }
 
   function renderMessages(messages) {
@@ -122,38 +229,7 @@
 
       if (m.attachments && m.attachments.length) {
         m.attachments.forEach(function (att) {
-          var wrap = document.createElement("div");
-          wrap.className = "support-attachment";
-
-          if (att.image) {
-            var imgLink = document.createElement("a");
-            imgLink.href = att.url;
-            imgLink.target = "_blank";
-            imgLink.rel = "noopener";
-            var img = document.createElement("img");
-            img.src = att.url;
-            img.alt = att.name || "фото";
-            img.className = "support-attachment-img";
-            imgLink.appendChild(img);
-            wrap.appendChild(imgLink);
-          } else {
-            var fileLink = document.createElement("a");
-            fileLink.href = att.url;
-            fileLink.target = "_blank";
-            fileLink.rel = "noopener";
-            fileLink.className = "support-attachment-file";
-            fileLink.textContent = "📎 " + (att.name || "файл");
-            wrap.appendChild(fileLink);
-          }
-
-          var dl = document.createElement("a");
-          dl.href = att.url;
-          dl.download = att.name || "";
-          dl.className = "support-attachment-download";
-          dl.textContent = "⬇ Скачать";
-          wrap.appendChild(dl);
-
-          row.appendChild(wrap);
+          renderAttachment(att, row);
         });
       }
 
@@ -177,7 +253,7 @@
       replyBtn.className = "support-reply-btn";
       replyBtn.textContent = "↩ Ответить";
       replyBtn.onclick = function () {
-        setReplyTo(m.id, m.body);
+        setReplyTo(m.id, m.body || (m.attachments && m.attachments.length ? "[вложение]" : ""));
       };
       row.appendChild(replyBtn);
 
@@ -215,19 +291,27 @@
 
   function send(text) {
     text = (text || input.value).trim();
-    if (!text || sending) return;
+    if ((!text && !pendingAttachment) || sending) return;
     showError("");
     var replyToId = replyTo ? replyTo.id : undefined;
+    var att = pendingAttachment;
 
     if (isLoggedIn) {
       sending = true;
       input.value = "";
       clearReplyTo();
+      clearPendingAttachment();
       fetch("/api/support/messages", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text, replyToId: replyToId }),
+        body: JSON.stringify({
+          body: text,
+          replyToId: replyToId,
+          attachmentUploadId: att ? att.uploadId : undefined,
+          attachmentKind: att ? att.kind : undefined,
+          attachmentName: att ? att.name : undefined,
+        }),
       })
         .then(function (r) {
           if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || "Ошибка отправки"); });
@@ -254,11 +338,21 @@
     sending = true;
     input.value = "";
     clearReplyTo();
+    clearPendingAttachment();
     fetch("/api/support/guest", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guestId: guestId || undefined, name: name || undefined, contact: contact || undefined, message: text, replyToId: replyToId }),
+      body: JSON.stringify({
+        guestId: guestId || undefined,
+        name: name || undefined,
+        contact: contact || undefined,
+        message: text,
+        replyToId: replyToId,
+        attachmentUploadId: att ? att.uploadId : undefined,
+        attachmentKind: att ? att.kind : undefined,
+        attachmentName: att ? att.name : undefined,
+      }),
     })
       .then(function (r) {
         if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || "Ошибка отправки"); });
@@ -284,6 +378,7 @@
   function startNewChat() {
     showError("");
     clearReplyTo();
+    clearPendingAttachment();
     if (isLoggedIn) {
       fetch("/api/support/reset", { method: "POST", credentials: "same-origin" })
         .then(function (r) {
@@ -331,6 +426,115 @@
     toggle.textContent = "💬";
     stopPolling();
   }
+
+  // --- Меню вложений (фото / камера / видео / файл) ---
+
+  function toggleAttachMenu(show) {
+    attachMenu.hidden = show === undefined ? !attachMenu.hidden : !show;
+  }
+
+  attachBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    toggleAttachMenu();
+  });
+  document.addEventListener("click", function () {
+    attachMenu.hidden = true;
+  });
+  attachMenu.addEventListener("click", function (e) {
+    e.stopPropagation();
+  });
+
+  pickGallery.addEventListener("click", function () {
+    toggleAttachMenu(false);
+    fileGallery.click();
+  });
+  pickCamera.addEventListener("click", function () {
+    toggleAttachMenu(false);
+    fileCamera.click();
+  });
+  pickVideo.addEventListener("click", function () {
+    toggleAttachMenu(false);
+    fileVideo.click();
+  });
+  pickFile.addEventListener("click", function () {
+    toggleAttachMenu(false);
+    fileAny.click();
+  });
+
+  fileGallery.addEventListener("change", function () { pickAndUpload(fileGallery); });
+  fileCamera.addEventListener("change", function () { pickAndUpload(fileCamera); });
+  fileVideo.addEventListener("change", function () { pickAndUpload(fileVideo); });
+  fileAny.addEventListener("change", function () { pickAndUpload(fileAny); });
+
+  attachCancelBtn.addEventListener("click", clearPendingAttachment);
+
+  // --- Запись голосового сообщения ---
+
+  function formatTime(sec) {
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function startRecording() {
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      showError("Запись голоса не поддерживается этим браузером");
+      return;
+    }
+    showError("");
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(function (stream) {
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = function (e) {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onstop = function () {
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          var wasCancelled = mediaRecorder._cancelled;
+          mediaRecorder = null;
+          if (wasCancelled) return;
+          var blob = new Blob(recordedChunks, { type: "audio/webm" });
+          if (blob.size === 0) return;
+          var file = new File([blob], "voice-message.webm", { type: "audio/webm" });
+          uploadFile(file)
+            .then(function (res) {
+              setPendingAttachment({ uploadId: res.uploadId, kind: "audio", name: "Голосовое сообщение" });
+            })
+            .catch(function () {
+              showError("Не удалось загрузить голосовое сообщение");
+            });
+        };
+        mediaRecorder.start();
+        recordingSeconds = 0;
+        recordingTime.textContent = formatTime(0);
+        recordingBar.hidden = false;
+        recordingTimer = setInterval(function () {
+          recordingSeconds++;
+          recordingTime.textContent = formatTime(recordingSeconds);
+        }, 1000);
+      })
+      .catch(function () {
+        showError("Не удалось получить доступ к микрофону");
+      });
+  }
+
+  function stopRecording(cancelled) {
+    if (recordingTimer) {
+      clearInterval(recordingTimer);
+      recordingTimer = null;
+    }
+    recordingBar.hidden = true;
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder._cancelled = !!cancelled;
+      mediaRecorder.stop();
+    }
+  }
+
+  voiceBtn.addEventListener("click", startRecording);
+  recordingStopBtn.addEventListener("click", function () { stopRecording(false); });
+  recordingCancelBtn.addEventListener("click", function () { stopRecording(true); });
 
   toggle.addEventListener("click", function () {
     if (open) closePanel();

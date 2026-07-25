@@ -801,14 +801,56 @@ input:disabled { background: var(--bg); color: var(--muted); }
 .support-guest-fields { display: flex; gap: 8px; margin-bottom: 8px; }
 .support-guest-fields[hidden] { display: none; }
 .support-guest-fields input { width: 50%; }
-.support-input-row { display: flex; gap: 8px; }
+.support-input-row { display: flex; align-items: center; gap: 6px; }
 .support-input-row input {
-  flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 13.5px;
+  flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 13.5px;
 }
 .support-foot input:focus { outline: none; border-color: var(--purple); }
-.support-input-row button {
+#supportSend {
   background: var(--purple); color: #fff; border: none; border-radius: 10px;
-  padding: 0 16px; font-weight: 600; font-size: 13px; cursor: pointer;
+  padding: 0 14px; height: 36px; font-weight: 600; font-size: 13px; cursor: pointer; flex-shrink: 0;
 }
-.support-input-row button:disabled { opacity: .6; cursor: default; }
+#supportSend:disabled { opacity: .6; cursor: default; }
 .support-error { color: var(--danger); font-size: 12px; padding: 0 14px 6px; }
+
+/* Кнопка вложения + всплывающее меню выбора */
+.support-attach-wrap { position: relative; flex-shrink: 0; }
+#supportAttachBtn, #supportVoiceBtn {
+  width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); font-size: 16px; cursor: pointer; flex-shrink: 0;
+}
+#supportAttachBtn:hover, #supportVoiceBtn:hover { background: var(--border); }
+
+.support-attach-menu {
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 5;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(22,33,58,.18); padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  min-width: 170px;
+}
+.support-attach-menu[hidden] { display: none; }
+.support-attach-menu button {
+  border: none; background: none; text-align: left; padding: 8px 10px; border-radius: 8px;
+  font-size: 13px; color: var(--ink); cursor: pointer; white-space: nowrap;
+}
+.support-attach-menu button:hover { background: var(--bg); }
+
+.support-attach-preview, .support-recording {
+  display: flex; align-items: center; gap: 8px; background: var(--bg);
+  border-radius: 10px; padding: 7px 10px; margin-bottom: 8px; font-size: 12.5px; color: var(--muted);
+}
+.support-attach-preview[hidden], .support-recording[hidden] { display: none; }
+.support-attach-preview span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.support-attach-preview button, .support-recording button {
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; flex-shrink: 0;
+}
+.support-recording-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--danger); flex-shrink: 0;
+  animation: support-rec-pulse 1s infinite;
+}
+@keyframes support-rec-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.support-recording-label { flex: 1; }
+.support-recording #supportRecordingStop { color: var(--purple); font-weight: 700; }
+
+/* Вложения видео/аудио внутри пузыря сообщения */
+.support-attachment-video { display: block; max-width: 100%; max-height: 220px; border-radius: 10px; }
+.support-attachment-audio { display: block; max-width: 220px; height: 34px; }

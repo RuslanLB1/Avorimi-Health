@@ -120,14 +120,17 @@ const (
 	SupportRoleAssistant SupportRole = "assistant"
 )
 
-// SupportAttachment — фото или документ, присланные оператором через Reply в
-// Telegram (см. telegram_relay.go). Файл не скачивается на сервер заранее —
-// FileID резолвится в содержимое "на лету" через apiSupportFileHandler,
-// когда пользователь открывает вложение в чате.
+// SupportAttachment — фото/видео/голосовое/файл в сообщении чата поддержки.
+// Ровно одно из двух полей заполнено: FileID — вложение прислал оператор
+// через Reply в Telegram (содержимое резолвится "на лету" через
+// apiSupportFileHandler); UploadID — вложение загрузил пользователь/гость
+// через виджет на сайте (см. uploads.go), отдаётся через apiUploadHandler
+// и таким же URL пересылается в Telegram при форварде оператору.
 type SupportAttachment struct {
-	FileID string
-	Name   string
-	Image  bool // true — показать превью <img>, false — карточка файла
+	FileID   string
+	UploadID string
+	Name     string
+	Kind     string // "image" | "video" | "audio" | "file"
 }
 
 // SupportMessage — одно сообщение в чате поддержки (гид-бот, свободный текст
@@ -176,6 +179,8 @@ type Store struct {
 	nextGuestMsg      int
 	guestContacts     map[string]guestContact
 	guestRelayPending map[int]string // telegram messageID -> guestID
+
+	uploads map[string]uploadedFile // uploadID -> содержимое вложения (см. uploads.go)
 }
 
 func NewStore() *Store {
@@ -197,6 +202,7 @@ func NewStore() *Store {
 		guestMessages:     map[string][]*SupportMessage{},
 		guestContacts:     map[string]guestContact{},
 		guestRelayPending: map[int]string{},
+		uploads:           map[string]uploadedFile{},
 	}
 	s.seed()
 	return s

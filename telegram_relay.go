@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"strings"
 	"time"
 )
 
@@ -28,6 +27,8 @@ type tgMessage struct {
 	Caption        string        `json:"caption"`
 	Chat           tgChat        `json:"chat"`
 	Photo          []tgPhotoSize `json:"photo"`
+	Video          *tgVideo      `json:"video"`
+	Voice          *tgVoice      `json:"voice"`
 	Document       *tgDocument   `json:"document"`
 	ReplyToMessage *tgMessage    `json:"reply_to_message"`
 }
@@ -39,6 +40,17 @@ type tgChat struct {
 // tgPhotoSize — один вариант размера фото; Telegram присылает несколько,
 // от маленького превью до полного разрешения. Берём последний (наибольший).
 type tgPhotoSize struct {
+	FileID string `json:"file_id"`
+}
+
+type tgVideo struct {
+	FileID   string `json:"file_id"`
+	FileName string `json:"file_name"`
+}
+
+// tgVoice — голосовое сообщение (кружок-запись прямо из Telegram, а не
+// прикреплённый аудиофайл). Отдаём как обычное audio-вложение.
+type tgVoice struct {
 	FileID string `json:"file_id"`
 }
 
@@ -124,6 +136,82 @@ func forwardGuestQuestionToTelegram(guestID, name, contact, question string) {
 	store.RegisterGuestRelay(parsed.Result.MessageID, guestID)
 }
 
+// telegramMediaMethod выбирает метод Bot API и имя поля исходя из типа
+// вложения, присланного пользователем/гостем с сайта.
+func telegramMediaMethod(kind string) (method, field string) {
+	switch kind {
+	case "image":
+		return "sendPhoto", "photo"
+	case "video":
+		return "sendVideo", "video"
+	default: // audio (голосовое) и generic-файлы — как документ, без строгих требований к кодеку
+		return "sendDocument", "document"
+	}
+}
+
+// sendTelegramMedia отправляет фото/видео/документ администратору по
+// публичному URL — Telegram сам скачивает файл с нашего сервера, поэтому
+// не нужно грузить его в Bot API напрямую (multipart). caption — подпись
+// (текст сообщения пользователя, если есть).
+func sendTelegramMedia(method, field, fileURL, caption string) (*tgSendResponse, error) {
+	token := os.Getenv("TELEGRAM_BOT_TOKEN")
+	chatID := os.Getenv("TELEGRAM_CHAT_ID")
+	if token == "" || chatID == "" {
+		return nil, fmt.Errorf("telegram не настроен")
+	}
+	payload := map[string]string{"chat_id": chatID, field: fileURL}
+	if caption != "" {
+		payload["caption"] = caption
+	}
+	body, _ := json.Marshal(payload)
+	resp, err := telegramClient.Post(fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method), "application/json", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var parsed tgSendResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil || !parsed.OK {
+		return nil, fmt.Errorf("telegram: не удалось отправить вложение")
+	}
+	return &parsed, nil
+}
+
+// forwardSupportAttachmentToTelegram пересылает вложение зарегистрированного
+// пользователя админу тем же способом, что и текстовые вопросы — регистрируя
+// релей, чтобы Reply на него ушёл обратно в чат пользователя.
+func forwardSupportAttachmentToTelegram(user *User, kind, fileURL, caption string) {
+	method, field := telegramMediaMethod(kind)
+	header := fmt.Sprintf("📎 Вложение в поддержку от %s (%s)", user.FullName, user.Phone)
+	full := header
+	if caption != "" {
+		full += "\n\n" + caption
+	}
+	full += "\n\n— Ответьте на это сообщение (Reply), чтобы ответ ушёл пользователю в чат."
+	parsed, err := sendTelegramMedia(method, field, fileURL, full)
+	if err != nil {
+		log.Printf("[telegram-relay] не удалось переслать вложение: %v", err)
+		return
+	}
+	store.RegisterRelay(parsed.Result.MessageID, user.ID)
+}
+
+// forwardGuestAttachmentToTelegram — то же самое для гостя без аккаунта.
+func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, fileURL, caption string) {
+	method, field := telegramMediaMethod(kind)
+	header := fmt.Sprintf("🆘 Вложение без аккаунта от %s (%s)", name, contact)
+	full := header
+	if caption != "" {
+		full += "\n\n" + caption
+	}
+	full += "\n\n— Ответьте на это сообщение (Reply), ответ уйдёт прямо в чат на сайте."
+	parsed, err := sendTelegramMedia(method, field, fileURL, full)
+	if err != nil {
+		log.Printf("[telegram-relay] не удалось переслать гостевое вложение: %v", err)
+		return
+	}
+	store.RegisterGuestRelay(parsed.Result.MessageID, guestID)
+}
+
 // notifyTelegramRelayable — как notifyTelegram, но дополнительно регистрирует
 // релей на отправленное сообщение: используется там, где после уведомления
 // ожидается, что администратор сможет ответить пользователю Reply'ем
@@ -200,20 +288,30 @@ func fetchTelegramUpdates(token string, offset int) ([]tgUpdate, error) {
 	return parsed.Result, nil
 }
 
-// messageAttachments достаёт фото/документ из сообщения администратора в
-// Telegram (если есть) в виде SupportAttachment — файл сохраняется по
+// messageAttachments достаёт фото/видео/документ из сообщения администратора
+// в Telegram (если есть) в виде SupportAttachment — файл сохраняется по
 // FileID, содержимое подгружается позже через apiSupportFileHandler.
 func messageAttachments(msg tgMessage) []SupportAttachment {
 	var out []SupportAttachment
 	if len(msg.Photo) > 0 {
 		largest := msg.Photo[len(msg.Photo)-1] // последний вариант — самый большой
-		out = append(out, SupportAttachment{FileID: largest.FileID, Name: "Фото", Image: true})
+		out = append(out, SupportAttachment{FileID: largest.FileID, Name: "Фото", Kind: "image"})
+	}
+	if msg.Video != nil {
+		name := msg.Video.FileName
+		if name == "" {
+			name = "Видео"
+		}
+		out = append(out, SupportAttachment{FileID: msg.Video.FileID, Name: name, Kind: "video"})
+	}
+	if msg.Voice != nil {
+		out = append(out, SupportAttachment{FileID: msg.Voice.FileID, Name: "Голосовое сообщение", Kind: "audio"})
 	}
 	if msg.Document != nil {
 		out = append(out, SupportAttachment{
 			FileID: msg.Document.FileID,
 			Name:   msg.Document.FileName,
-			Image:  strings.HasPrefix(msg.Document.MimeType, "image/"),
+			Kind:   attachmentKind(msg.Document.MimeType),
 		})
 	}
 	return out
