@@ -731,13 +731,35 @@ input:disabled { background: var(--bg); color: var(--muted); }
 .support-head { background: var(--gradient); color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .support-head strong { display: block; font-size: 14px; }
 .support-head span { display: block; font-size: 11.5px; opacity: .85; margin-top: 2px; }
+.support-head-actions { display: flex; align-items: center; gap: 6px; }
 .support-head button { background: rgba(255,255,255,.18); border: none; color: #fff; width: 26px; height: 26px; border-radius: 8px; cursor: pointer; font-size: 14px; }
 
 .support-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); }
-.support-msg { max-width: 85%; padding: 9px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; }
+.support-msg { max-width: 85%; padding: 9px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; position: relative; }
 .support-msg.user { align-self: flex-end; background: var(--purple); color: #fff; border-bottom-right-radius: 4px; }
 .support-msg.assistant { align-self: flex-start; background: var(--card); border: 1px solid var(--border); color: var(--ink); border-bottom-left-radius: 4px; }
 .support-hint { font-size: 13px; color: var(--muted); }
+
+.support-quote {
+  border-left: 3px solid rgba(0,0,0,.18); padding: 2px 8px; margin-bottom: 6px;
+  font-size: 12px; opacity: .8; white-space: normal; line-height: 1.35;
+}
+.support-msg.user .support-quote { border-left-color: rgba(255,255,255,.6); }
+
+.support-reply-btn {
+  display: block; margin-top: 4px; border: none; background: none; cursor: pointer;
+  font-size: 11px; padding: 0; opacity: .55; color: inherit;
+}
+.support-msg.user .support-reply-btn { text-align: right; margin-left: auto; }
+.support-reply-btn:hover { opacity: 1; text-decoration: underline; }
+
+.support-reply-preview {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  background: var(--bg); border-top: 1px solid var(--border); padding: 8px 14px;
+}
+.support-reply-preview-text span { display: block; font-size: 10.5px; color: var(--purple); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+.support-reply-preview-text p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+.support-reply-preview button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; flex-shrink: 0; }
 
 .support-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .support-options button {

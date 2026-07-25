@@ -6,9 +6,19 @@
         <strong>Поддержка Avorimi</strong>
         <span>Записи, оплата, регистрация</span>
       </div>
-      <button type="button" id="supportClose" aria-label="Закрыть">✕</button>
+      <div class="support-head-actions">
+        <button type="button" id="supportNewChat" title="Начать новый чат">🔄</button>
+        <button type="button" id="supportClose" aria-label="Закрыть">✕</button>
+      </div>
     </div>
     <div class="support-body" id="supportBody"></div>
+    <div class="support-reply-preview" id="supportReplyPreview" hidden>
+      <div class="support-reply-preview-text">
+        <span>Ответ на сообщение</span>
+        <p id="supportReplyPreviewBody"></p>
+      </div>
+      <button type="button" id="supportReplyCancel" aria-label="Отменить ответ">✕</button>
+    </div>
     <div class="support-error" id="supportError" hidden></div>
     <div class="support-foot">
       {{if not .CurrentUser}}

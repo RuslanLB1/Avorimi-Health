@@ -14,12 +14,17 @@ import (
 // для свободного текста.
 
 const (
-	stageAwaitingReview         = "awaiting_review"
-	stageAwaitingIdea           = "awaiting_idea"
+	stageAwaitingReview          = "awaiting_review"
+	stageAwaitingIdea            = "awaiting_idea"
 	stageAwaitingBookingFeedback = "awaiting_booking_feedback"
-	stageAwaitingRegFeedback    = "awaiting_reg_feedback"
+	stageAwaitingRegFeedback     = "awaiting_reg_feedback"
 	stageAwaitingPaymentFeedback = "awaiting_payment_feedback"
-	stageAwaitingOperator       = "awaiting_operator"
+	stageAwaitingOperator        = "awaiting_operator"
+	// stageClosed — чат автоматически закрыт по неактивности (см.
+	// support_sweep.go). Следующее сообщение пользователя снова показывает
+	// приветствие с меню, как в самом начале, а не пытается его обработать
+	// в контексте старого диалога.
+	stageClosed = "closed"
 )
 
 // mainMenuOptions — метки кнопок главного меню. Ровно эти же строки
@@ -48,6 +53,16 @@ func firstNameOrFull(user *User) string {
 		return parts[0]
 	}
 	return user.FullName
+}
+
+// mainMenuGreeting — стартовое сообщение бота с кнопками меню. Используется
+// и для «Начать новый чат», и для автоматического приветствия после того,
+// как предыдущий диалог закрылся по неактивности.
+func mainMenuGreeting(user *User) supportBotResult {
+	return supportBotResult{
+		Body:    fmt.Sprintf("Здравствуйте, %s! Я поддержка Avorimi Health. Чем могу помочь?", firstNameOrFull(user)),
+		Options: mainMenuOptions,
+	}
 }
 
 func extractRating(text string) string {
@@ -106,6 +121,11 @@ func handleHelpFeedback(user *User, choice, topic string) supportFlowOutcome {
 // (store.SupportStage), msg — только что присланное сообщение.
 func runSupportFlow(user *User, stage, msg string) supportFlowOutcome {
 	choice := strings.TrimSpace(msg)
+
+	if stage == stageClosed {
+		// Прошлый диалог закрылся по неактивности — начинаем как в первый раз.
+		return supportFlowOutcome{Reply: mainMenuGreeting(user)}
+	}
 
 	switch stage {
 	case stageAwaitingReview:

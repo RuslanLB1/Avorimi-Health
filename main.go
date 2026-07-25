@@ -27,6 +27,7 @@ func main() {
 		ai = MockAIProvider{}
 	}
 	startTelegramRelayPoller()
+	startSupportInactivitySweeper(1 * time.Minute)
 
 	funcMap := template.FuncMap{
 		"money": func(v int) string {
@@ -125,6 +126,7 @@ func main() {
 	// приложения (Bearer-токен), см. requireSupportAuth в api.go.
 	mux.HandleFunc("GET /api/support/messages", requireSupportAuth(apiListSupportMessagesHandler))
 	mux.HandleFunc("POST /api/support/messages", requireSupportAuth(apiSendSupportMessageHandler))
+	mux.HandleFunc("POST /api/support/reset", requireSupportAuth(apiResetSupportChatHandler))
 	mux.HandleFunc("POST /api/support/guest", withCORS(apiGuestSupportHandler))
 	mux.HandleFunc("GET /api/support/guest/messages", withCORS(apiGuestMessagesHandler))
 

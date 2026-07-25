@@ -123,12 +123,14 @@ const (
 // SupportMessage — одно сообщение в чате поддержки (гид-бот, свободный текст
 // или ответ оператора, прилетевший через Telegram-релей).
 type SupportMessage struct {
-	ID        int
-	UserID    int
-	Role      SupportRole
-	Body      string
-	Options   []string // кнопки быстрого ответа, приложенные к сообщению бота
-	CreatedAt time.Time
+	ID          int
+	UserID      int
+	Role        SupportRole
+	Body        string
+	Options     []string // кнопки быстрого ответа, приложенные к сообщению бота
+	ReplyToID   int       // ID сообщения, на которое отвечает пользователь (0 — не ответ)
+	ReplyToBody string    // снимок текста цитируемого сообщения на момент ответа
+	CreatedAt   time.Time
 }
 
 type guestContact struct {
@@ -777,4 +779,16 @@ func (s *Store) SetSupportStage(userID int, stage string) {
 		return
 	}
 	s.supportStage[userID] = stage
+}
+
+// AllSupportUserIDs — все пользователи, у которых есть хоть одно сообщение в
+// чате поддержки. Используется фоновой проверкой неактивности (support_sweep.go).
+func (s *Store) AllSupportUserIDs() []int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ids := make([]int, 0, len(s.supportMessages))
+	for id := range s.supportMessages {
+		ids = append(ids, id)
+	}
+	return ids
 }

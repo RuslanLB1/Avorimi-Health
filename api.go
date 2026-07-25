@@ -385,15 +385,32 @@ func apiResultsHandler(w http.ResponseWriter, r *http.Request, user *User) {
 const freeSupportMessagesPerDay = 20
 
 type supportMessageView struct {
-	ID        int       `json:"id"`
-	Role      string    `json:"role"`
-	Body      string    `json:"body"`
-	Options   []string  `json:"options,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          int       `json:"id"`
+	Role        string    `json:"role"`
+	Body        string    `json:"body"`
+	Options     []string  `json:"options,omitempty"`
+	ReplyToID   int       `json:"replyToId,omitempty"`
+	ReplyToBody string    `json:"replyToBody,omitempty"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 func toSupportMessageView(m *SupportMessage) supportMessageView {
-	return supportMessageView{ID: m.ID, Role: string(m.Role), Body: m.Body, Options: m.Options, CreatedAt: m.CreatedAt}
+	return supportMessageView{
+		ID: m.ID, Role: string(m.Role), Body: m.Body, Options: m.Options,
+		ReplyToID: m.ReplyToID, ReplyToBody: m.ReplyToBody, CreatedAt: m.CreatedAt,
+	}
+}
+
+// quotePreview обрезает текст цитируемого сообщения для превью (в чате и в
+// пересылке в Telegram) — полный текст цитировать незачем.
+func quotePreview(text string) string {
+	text = strings.TrimSpace(text)
+	const limit = 160
+	r := []rune(text)
+	if len(r) <= limit {
+		return text
+	}
+	return string(r[:limit]) + "…"
 }
 
 func apiListSupportMessagesHandler(w http.ResponseWriter, r *http.Request, user *User) {
@@ -405,8 +422,19 @@ func apiListSupportMessagesHandler(w http.ResponseWriter, r *http.Request, user 
 	writeJSON(w, http.StatusOK, views)
 }
 
+// apiResetSupportChatHandler — «Начать новый чат»: сбрасывает шаг гид-бота и
+// присылает приветствие с меню заново, не удаляя историю переписки (старые
+// сообщения остаются доступны, в том числе для ответа через ReplyToID).
+func apiResetSupportChatHandler(w http.ResponseWriter, r *http.Request, user *User) {
+	store.SetSupportStage(user.ID, "")
+	greeting := mainMenuGreeting(user)
+	msg := store.AddSupportMessage(&SupportMessage{UserID: user.ID, Role: SupportRoleAssistant, Body: greeting.Body, Options: greeting.Options})
+	writeJSON(w, http.StatusCreated, toSupportMessageView(msg))
+}
+
 type sendSupportMessageRequest struct {
-	Body string `json:"body"`
+	Body      string `json:"body"`
+	ReplyToID int    `json:"replyToId,omitempty"`
 }
 
 func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *User) {
@@ -421,38 +449,63 @@ func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *
 		return
 	}
 
-	userMsg := store.AddSupportMessage(&SupportMessage{UserID: user.ID, Role: SupportRoleUser, Body: req.Body})
+	// Явный ответ на конкретное сообщение (в т.ч. на старое, из вчерашнего
+	// разговора) — находим его текст, чтобы процитировать в Telegram: так
+	// администратор сразу понимает контекст, даже если это та же проблема,
+	// что была вчера и вроде бы решилась.
+	var replyToBody string
+	if req.ReplyToID > 0 {
+		for _, m := range store.SupportMessagesForUser(user.ID) {
+			if m.ID == req.ReplyToID {
+				replyToBody = quotePreview(m.Body)
+				break
+			}
+		}
+	}
 
-	stage := store.SupportStage(user.ID)
-	outcome := runSupportFlow(user, stage, req.Body)
+	userMsg := store.AddSupportMessage(&SupportMessage{
+		UserID: user.ID, Role: SupportRoleUser, Body: req.Body,
+		ReplyToID: req.ReplyToID, ReplyToBody: replyToBody,
+	})
 
 	var replyText string
 	var replyOptions []string
-	if outcome.handled() {
-		replyText = outcome.Reply.Body
-		replyOptions = outcome.Reply.Options
-		store.SetSupportStage(user.ID, outcome.Reply.Stage)
+
+	if replyToBody != "" {
+		// Ответ на конкретное сообщение всегда уходит напрямую оператору с
+		// цитатой — это не часть кнопочного меню, текущий шаг гид-бота не трогаем.
+		quoted := fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Body)
+		go forwardSupportQuestionToTelegram(user, quoted)
+		replyText = "Передал ваш вопрос оператору с учётом контекста — он ответит здесь же, в чате."
 	} else {
-		// Свободный текст вне гид-бота — regex-классификатор (или Anthropic, если подключён).
-		history := store.SupportMessagesForUser(user.ID)
-		aiHistory := make([]AIMessage, 0, len(history))
-		for _, m := range history {
-			aiHistory = append(aiHistory, AIMessage{Role: m.Role, Body: m.Body})
+		stage := store.SupportStage(user.ID)
+		outcome := runSupportFlow(user, stage, req.Body)
+		if outcome.handled() {
+			replyText = outcome.Reply.Body
+			replyOptions = outcome.Reply.Options
+			store.SetSupportStage(user.ID, outcome.Reply.Stage)
+		} else {
+			// Свободный текст вне гид-бота — regex-классификатор (или Anthropic, если подключён).
+			history := store.SupportMessagesForUser(user.ID)
+			aiHistory := make([]AIMessage, 0, len(history))
+			for _, m := range history {
+				aiHistory = append(aiHistory, AIMessage{Role: m.Role, Body: m.Body})
+			}
+			text, err := ai.Reply(aiHistory, req.Body)
+			if err != nil {
+				text = "Не получилось получить ответ ассистента — попробуйте ещё раз чуть позже."
+			}
+			replyText = text
+			if feedbackRe.MatchString(req.Body) {
+				go notifyTelegramFeedback(user, req.Body)
+			}
+			if registrationTroubleRe.MatchString(req.Body) {
+				go notifyTelegramRelayable(user, fmt.Sprintf("🆘 Пользователь застрял на регистрации/входе\nОт: %s (%s)\n\n%s\n\n— Ответьте на это сообщение (Reply), ответ уйдёт пользователю в чат.", user.FullName, user.Phone, req.Body))
+			}
+			// Пока не подключён платный Anthropic API — дублируем вопрос админу в
+			// Telegram; Reply на это сообщение придёт пользователю как ответ поддержки.
+			go forwardSupportQuestionToTelegram(user, req.Body)
 		}
-		text, err := ai.Reply(aiHistory, req.Body)
-		if err != nil {
-			text = "Не получилось получить ответ ассистента — попробуйте ещё раз чуть позже."
-		}
-		replyText = text
-		if feedbackRe.MatchString(req.Body) {
-			go notifyTelegramFeedback(user, req.Body)
-		}
-		if registrationTroubleRe.MatchString(req.Body) {
-			go notifyTelegramRelayable(user, fmt.Sprintf("🆘 Пользователь застрял на регистрации/входе\nОт: %s (%s)\n\n%s\n\n— Ответьте на это сообщение (Reply), ответ уйдёт пользователю в чат.", user.FullName, user.Phone, req.Body))
-		}
-		// Пока не подключён платный Anthropic API — дублируем вопрос админу в
-		// Telegram; Reply на это сообщение придёт пользователю как ответ поддержки.
-		go forwardSupportQuestionToTelegram(user, req.Body)
 	}
 
 	reply := store.AddSupportMessage(&SupportMessage{UserID: user.ID, Role: SupportRoleAssistant, Body: replyText, Options: replyOptions})
@@ -460,10 +513,11 @@ func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *
 }
 
 type guestSupportRequest struct {
-	GuestID string `json:"guestId,omitempty"` // пусто при первом сообщении — сервер создаст новую сессию
-	Name    string `json:"name,omitempty"`
-	Contact string `json:"contact,omitempty"`
-	Message string `json:"message"`
+	GuestID   string `json:"guestId,omitempty"` // пусто при первом сообщении — сервер создаст новую сессию
+	Name      string `json:"name,omitempty"`
+	Contact   string `json:"contact,omitempty"`
+	Message   string `json:"message"`
+	ReplyToID int    `json:"replyToId,omitempty"`
 }
 
 // apiGuestSupportHandler — обращения в поддержку от тех, кто не может
@@ -493,8 +547,26 @@ func apiGuestSupportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userMsg := store.AddGuestMessage(guestID, &SupportMessage{Role: SupportRoleUser, Body: req.Message})
-	go forwardGuestQuestionToTelegram(guestID, gc.Name, gc.Contact, req.Message)
+	var replyToBody string
+	if req.ReplyToID > 0 {
+		for _, m := range store.GuestMessages(guestID) {
+			if m.ID == req.ReplyToID {
+				replyToBody = quotePreview(m.Body)
+				break
+			}
+		}
+	}
+
+	userMsg := store.AddGuestMessage(guestID, &SupportMessage{
+		Role: SupportRoleUser, Body: req.Message,
+		ReplyToID: req.ReplyToID, ReplyToBody: replyToBody,
+	})
+
+	question := req.Message
+	if replyToBody != "" {
+		question = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Message)
+	}
+	go forwardGuestQuestionToTelegram(guestID, gc.Name, gc.Contact, question)
 
 	writeJSON(w, http.StatusCreated, map[string]any{"guestId": guestID, "message": toSupportMessageView(userMsg)})
 }

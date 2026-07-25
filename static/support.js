@@ -22,6 +22,7 @@
   var panel = document.getElementById("supportPanel");
   var toggle = document.getElementById("supportToggle");
   var closeBtn = document.getElementById("supportClose");
+  var newChatBtn = document.getElementById("supportNewChat");
   var body = document.getElementById("supportBody");
   var errorEl = document.getElementById("supportError");
   var input = document.getElementById("supportInput");
@@ -29,11 +30,15 @@
   var guestFields = document.getElementById("supportGuestFields");
   var guestNameInput = document.getElementById("supportGuestName");
   var guestContactInput = document.getElementById("supportGuestContact");
+  var replyPreview = document.getElementById("supportReplyPreview");
+  var replyPreviewBody = document.getElementById("supportReplyPreviewBody");
+  var replyCancelBtn = document.getElementById("supportReplyCancel");
 
   var open = false;
   var sending = false;
   var pollTimer = null;
   var guestId = localStorage.getItem(GUEST_ID_KEY) || "";
+  var replyTo = null; // {id, body} — сообщение, на которое отвечаем
 
   function esc(s) {
     var d = document.createElement("div");
@@ -53,6 +58,18 @@
 
   function scrollToBottom() {
     body.scrollTop = body.scrollHeight;
+  }
+
+  function setReplyTo(id, text) {
+    replyTo = { id: id, body: text };
+    replyPreviewBody.textContent = text.length > 90 ? text.slice(0, 90) + "…" : text;
+    replyPreview.hidden = false;
+    input.focus();
+  }
+
+  function clearReplyTo() {
+    replyTo = null;
+    replyPreview.hidden = true;
   }
 
   function renderMessages(messages) {
@@ -85,10 +102,21 @@
     messages.forEach(function (m) {
       var row = document.createElement("div");
       row.className = "support-msg " + (m.role === "user" ? "user" : "assistant");
-      row.innerHTML = esc(m.body).replace(/\n/g, "<br>");
+
+      if (m.replyToBody) {
+        var quote = document.createElement("div");
+        quote.className = "support-quote";
+        quote.textContent = m.replyToBody;
+        row.appendChild(quote);
+      }
+
+      var textEl = document.createElement("div");
+      textEl.innerHTML = esc(m.body).replace(/\n/g, "<br>");
+      row.appendChild(textEl);
+
       if (m.options && m.options.length) {
-        var opts = document.createElement("div");
-        opts.className = "support-options";
+        var optsWrap = document.createElement("div");
+        optsWrap.className = "support-options";
         m.options.forEach(function (opt) {
           var b = document.createElement("button");
           b.type = "button";
@@ -96,10 +124,20 @@
           b.onclick = function () {
             send(opt);
           };
-          opts.appendChild(b);
+          optsWrap.appendChild(b);
         });
-        row.appendChild(opts);
+        row.appendChild(optsWrap);
       }
+
+      var replyBtn = document.createElement("button");
+      replyBtn.type = "button";
+      replyBtn.className = "support-reply-btn";
+      replyBtn.textContent = "↩ Ответить";
+      replyBtn.onclick = function () {
+        setReplyTo(m.id, m.body);
+      };
+      row.appendChild(replyBtn);
+
       body.appendChild(row);
     });
     scrollToBottom();
@@ -136,15 +174,17 @@
     text = (text || input.value).trim();
     if (!text || sending) return;
     showError("");
+    var replyToId = replyTo ? replyTo.id : undefined;
 
     if (isLoggedIn) {
       sending = true;
       input.value = "";
+      clearReplyTo();
       fetch("/api/support/messages", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: text }),
+        body: JSON.stringify({ body: text, replyToId: replyToId }),
       })
         .then(function (r) {
           if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || "Ошибка отправки"); });
@@ -170,11 +210,12 @@
     }
     sending = true;
     input.value = "";
+    clearReplyTo();
     fetch("/api/support/guest", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guestId: guestId || undefined, name: name || undefined, contact: contact || undefined, message: text }),
+      body: JSON.stringify({ guestId: guestId || undefined, name: name || undefined, contact: contact || undefined, message: text, replyToId: replyToId }),
     })
       .then(function (r) {
         if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || "Ошибка отправки"); });
@@ -195,6 +236,31 @@
         sending = false;
         showError(e.message || "Не удалось отправить сообщение");
       });
+  }
+
+  function startNewChat() {
+    showError("");
+    clearReplyTo();
+    if (isLoggedIn) {
+      fetch("/api/support/reset", { method: "POST", credentials: "same-origin" })
+        .then(function (r) {
+          if (!r.ok) throw new Error();
+          return r.json();
+        })
+        .then(load)
+        .catch(function () {
+          showError("Не удалось начать новый чат");
+        });
+      return;
+    }
+    localStorage.removeItem(GUEST_ID_KEY);
+    localStorage.removeItem(GUEST_NAME_KEY);
+    localStorage.removeItem(GUEST_CONTACT_KEY);
+    guestId = "";
+    if (guestFields) guestFields.hidden = false;
+    if (guestNameInput) guestNameInput.value = "";
+    if (guestContactInput) guestContactInput.value = "";
+    renderMessages([]);
   }
 
   function startPolling() {
@@ -228,6 +294,8 @@
     else openPanel();
   });
   closeBtn.addEventListener("click", closePanel);
+  newChatBtn.addEventListener("click", startNewChat);
+  replyCancelBtn.addEventListener("click", clearReplyTo);
   sendBtn.addEventListener("click", function () {
     send();
   });
