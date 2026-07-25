@@ -136,6 +136,105 @@
       });
   }
 
+  // --- Плеер голосового сообщения — волна ("кардиограмма") + play/pause, как в мессенджерах ---
+
+  function hashString(str) {
+    var h = 0;
+    for (var i = 0; i < str.length; i++) {
+      h = (h * 31 + str.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h);
+  }
+
+  function buildWaveformBars(seedStr, count) {
+    var seed = hashString(seedStr) || 1;
+    var bars = [];
+    for (var i = 0; i < count; i++) {
+      seed = (seed * 9301 + 49297) % 233280;
+      var rnd = seed / 233280;
+      bars.push(Math.round(18 + rnd * 82)); // высота 18%..100%
+    }
+    return bars;
+  }
+
+  function formatAudioTime(sec) {
+    if (!isFinite(sec) || sec < 0) return "0:00";
+    var m = Math.floor(sec / 60);
+    var s = Math.floor(sec % 60);
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function buildVoicePlayer(url) {
+    var wrap = document.createElement("div");
+    wrap.className = "voice-player";
+
+    var playBtn = document.createElement("button");
+    playBtn.type = "button";
+    playBtn.className = "voice-play-btn";
+    playBtn.textContent = "▶";
+    wrap.appendChild(playBtn);
+
+    var waveWrap = document.createElement("div");
+    waveWrap.className = "voice-wave-wrap";
+    var bg = document.createElement("div");
+    bg.className = "voice-wave voice-wave-bg";
+    var fg = document.createElement("div");
+    fg.className = "voice-wave voice-wave-fg";
+    buildWaveformBars(url, 27).forEach(function (h) {
+      var b1 = document.createElement("span");
+      b1.style.height = h + "%";
+      bg.appendChild(b1);
+      var b2 = document.createElement("span");
+      b2.style.height = h + "%";
+      fg.appendChild(b2);
+    });
+    waveWrap.appendChild(bg);
+    waveWrap.appendChild(fg);
+    wrap.appendChild(waveWrap);
+
+    var timeEl = document.createElement("span");
+    timeEl.className = "voice-time";
+    timeEl.textContent = "0:00";
+    wrap.appendChild(timeEl);
+
+    var audio = new Audio(url);
+    audio.preload = "metadata";
+    audio.className = "support-voice-audio";
+
+    audio.addEventListener("loadedmetadata", function () {
+      timeEl.textContent = formatAudioTime(audio.duration);
+    });
+    audio.addEventListener("timeupdate", function () {
+      if (audio.duration) fg.style.width = (audio.currentTime / audio.duration) * 100 + "%";
+      timeEl.textContent = formatAudioTime(audio.currentTime || audio.duration);
+    });
+    audio.addEventListener("play", function () { playBtn.textContent = "⏸"; });
+    audio.addEventListener("pause", function () { playBtn.textContent = "▶"; });
+    audio.addEventListener("ended", function () {
+      fg.style.width = "0%";
+      timeEl.textContent = formatAudioTime(audio.duration);
+    });
+
+    playBtn.addEventListener("click", function () {
+      if (audio.paused) {
+        document.querySelectorAll("audio.support-voice-audio").forEach(function (a) {
+          if (a !== audio) a.pause();
+        });
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    });
+
+    waveWrap.addEventListener("click", function (e) {
+      if (!audio.duration) return;
+      var rect = waveWrap.getBoundingClientRect();
+      audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    });
+
+    return wrap;
+  }
+
   function renderAttachment(att, row) {
     var wrap = document.createElement("div");
     wrap.className = "support-attachment";
@@ -158,11 +257,7 @@
       video.className = "support-attachment-video";
       wrap.appendChild(video);
     } else if (att.kind === "audio") {
-      var audio = document.createElement("audio");
-      audio.src = att.url;
-      audio.controls = true;
-      audio.className = "support-attachment-audio";
-      wrap.appendChild(audio);
+      wrap.appendChild(buildVoicePlayer(att.url));
     } else {
       var fileLink = document.createElement("a");
       fileLink.href = att.url;
