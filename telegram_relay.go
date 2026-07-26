@@ -140,16 +140,34 @@ func forwardGuestQuestionToTelegram(guestID, name, contact, question string) {
 }
 
 // telegramMediaMethod выбирает метод Bot API и имя поля исходя из типа
-// вложения, присланного пользователем/гостем с сайта.
+// вложения, присланного пользователем/гостем с сайта. Для audio (голосовые)
+// пробуем sendAudio первым — тогда у админа плеер, а не иконка файла; если
+// Telegram отклонит формат (sendAudio официально принимает только mp3/m4a),
+// вызывающий код откатывается на sendDocument (см. sendMediaWithFallback).
 func telegramMediaMethod(kind string) (method, field string) {
 	switch kind {
 	case "image":
 		return "sendPhoto", "photo"
 	case "video":
 		return "sendVideo", "video"
-	default: // audio (голосовое) и generic-файлы — как документ, без строгих требований к кодеку
+	case "audio":
+		return "sendAudio", "audio"
+	default:
 		return "sendDocument", "document"
 	}
+}
+
+// sendMediaWithFallback пытается отправить основным методом (см.
+// telegramMediaMethod) и, если Telegram отклонил формат, повторяет
+// sendDocument — так вложение гарантированно доходит в каком-то виде.
+func sendMediaWithFallback(kind, filename string, data []byte, caption string) (*tgSendResponse, error) {
+	method, field := telegramMediaMethod(kind)
+	parsed, err := sendTelegramMediaBytes(method, field, filename, data, caption)
+	if err == nil || method == "sendDocument" {
+		return parsed, err
+	}
+	log.Printf("[telegram-relay] %s не удался (%v), пробую sendDocument", method, err)
+	return sendTelegramMediaBytes("sendDocument", "document", filename, data, caption)
 }
 
 // sendTelegramMediaBytes загружает файл в Telegram напрямую (multipart),
@@ -212,14 +230,13 @@ func sendTelegramMediaBytes(method, field, filename string, data []byte, caption
 // релей, чтобы Reply на него ушёл обратно в чат пользователя. Вызывается
 // синхронно из api.go, чтобы пользователь узнал, если доставка не удалась.
 func forwardSupportAttachmentToTelegram(user *User, kind, filename string, data []byte, caption string) error {
-	method, field := telegramMediaMethod(kind)
 	header := fmt.Sprintf("📎 Вложение в поддержку от %s (%s)", user.FullName, user.Phone)
 	full := header
 	if caption != "" {
 		full += "\n\n" + caption
 	}
 	full += "\n\n— Ответьте на это сообщение (Reply), чтобы ответ ушёл пользователю в чат."
-	parsed, err := sendTelegramMediaBytes(method, field, filename, data, full)
+	parsed, err := sendMediaWithFallback(kind, filename, data, full)
 	if err != nil {
 		log.Printf("[telegram-relay] не удалось переслать вложение (kind=%s): %v", kind, err)
 		return err
@@ -230,14 +247,13 @@ func forwardSupportAttachmentToTelegram(user *User, kind, filename string, data 
 
 // forwardGuestAttachmentToTelegram — то же самое для гостя без аккаунта.
 func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, filename string, data []byte, caption string) error {
-	method, field := telegramMediaMethod(kind)
 	header := fmt.Sprintf("🆘 Вложение без аккаунта от %s (%s)", name, contact)
 	full := header
 	if caption != "" {
 		full += "\n\n" + caption
 	}
 	full += "\n\n— Ответьте на это сообщение (Reply), ответ уйдёт прямо в чат на сайте."
-	parsed, err := sendTelegramMediaBytes(method, field, filename, data, full)
+	parsed, err := sendMediaWithFallback(kind, filename, data, full)
 	if err != nil {
 		log.Printf("[telegram-relay] не удалось переслать гостевое вложение (kind=%s): %v", kind, err)
 		return err
