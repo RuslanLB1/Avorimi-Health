@@ -26,17 +26,6 @@ func writeErr(w http.ResponseWriter, status int, key string) {
 	writeJSON(w, status, map[string]string{"error": key})
 }
 
-// publicOrigin строит абсолютный адрес нашего сервера для текущего запроса —
-// нужен, чтобы дать Telegram публичную ссылку на загруженное вложение
-// (Telegram сам скачивает файл по URL, а не принимает его лишь multipart'ом).
-func publicOrigin(r *http.Request) string {
-	proto := r.Header.Get("X-Forwarded-Proto")
-	if proto == "" {
-		proto = "https"
-	}
-	return proto + "://" + r.Host
-}
-
 func withCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -509,8 +498,10 @@ func apiSendSupportMessageHandler(w http.ResponseWriter, r *http.Request, user *
 		if replyToBody != "" {
 			caption = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Body)
 		}
-		fileURL := publicOrigin(r) + "/api/support/uploads/" + req.AttachmentUploadID
-		if err := forwardSupportAttachmentToTelegram(user, req.AttachmentKind, fileURL, caption); err != nil {
+		upload, ok := store.GetUpload(req.AttachmentUploadID)
+		if !ok {
+			replyText = "Не получилось передать файл оператору: вложение не найдено."
+		} else if err := forwardSupportAttachmentToTelegram(user, req.AttachmentKind, upload.Name, upload.Data, caption); err != nil {
 			log.Printf("[support] не удалось передать вложение оператору: %v", err)
 			replyText = "Не получилось передать файл оператору: " + err.Error()
 		} else {
@@ -620,8 +611,10 @@ func apiGuestSupportHandler(w http.ResponseWriter, r *http.Request) {
 		if replyToBody != "" {
 			caption = fmt.Sprintf("↩️ В ответ на «%s»\n\n%s", replyToBody, req.Message)
 		}
-		fileURL := publicOrigin(r) + "/api/support/uploads/" + req.AttachmentUploadID
-		if err := forwardGuestAttachmentToTelegram(guestID, gc.Name, gc.Contact, req.AttachmentKind, fileURL, caption); err != nil {
+		upload, ok := store.GetUpload(req.AttachmentUploadID)
+		if !ok {
+			store.AddGuestMessage(guestID, &SupportMessage{Role: SupportRoleAssistant, Body: "Не получилось передать файл оператору: вложение не найдено."})
+		} else if err := forwardGuestAttachmentToTelegram(guestID, gc.Name, gc.Contact, req.AttachmentKind, upload.Name, upload.Data, caption); err != nil {
 			log.Printf("[support] не удалось передать гостевое вложение оператору: %v", err)
 			store.AddGuestMessage(guestID, &SupportMessage{Role: SupportRoleAssistant, Body: "Не получилось передать файл оператору: " + err.Error()})
 		}

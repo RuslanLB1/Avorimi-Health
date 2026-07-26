@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -151,22 +152,47 @@ func telegramMediaMethod(kind string) (method, field string) {
 	}
 }
 
-// sendTelegramMedia отправляет фото/видео/документ администратору по
-// публичному URL — Telegram сам скачивает файл с нашего сервера, поэтому
-// не нужно грузить его в Bot API напрямую (multipart). caption — подпись
-// (текст сообщения пользователя, если есть).
-func sendTelegramMedia(method, field, fileURL, caption string) (*tgSendResponse, error) {
+// sendTelegramMediaBytes загружает файл в Telegram напрямую (multipart),
+// а не по публичной ссылке — на бесплатном Render сервер засыпает после
+// простоя и просыпается 30-50 секунд, а Telegram при скачивании по URL
+// ждёт заметно меньше и отваливается с "failed to get HTTP URL content".
+// Прямая загрузка не зависит от этого: раз наш процесс уже обрабатывает
+// текущий запрос, он точно не спит.
+func sendTelegramMediaBytes(method, field, filename string, data []byte, caption string) (*tgSendResponse, error) {
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	chatID := os.Getenv("TELEGRAM_CHAT_ID")
 	if token == "" || chatID == "" {
 		return nil, fmt.Errorf("telegram не настроен")
 	}
-	payload := map[string]string{"chat_id": chatID, field: fileURL}
-	if caption != "" {
-		payload["caption"] = caption
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	if err := mw.WriteField("chat_id", chatID); err != nil {
+		return nil, err
 	}
-	body, _ := json.Marshal(payload)
-	resp, err := telegramClient.Post(fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method), "application/json", bytes.NewReader(body))
+	if caption != "" {
+		if err := mw.WriteField("caption", caption); err != nil {
+			return nil, err
+		}
+	}
+	part, err := mw.CreateFormFile(field, filename)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := part.Write(data); err != nil {
+		return nil, err
+	}
+	if err := mw.Close(); err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method), &buf)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+
+	resp, err := telegramClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +211,7 @@ func sendTelegramMedia(method, field, fileURL, caption string) (*tgSendResponse,
 // пользователя админу тем же способом, что и текстовые вопросы — регистрируя
 // релей, чтобы Reply на него ушёл обратно в чат пользователя. Вызывается
 // синхронно из api.go, чтобы пользователь узнал, если доставка не удалась.
-func forwardSupportAttachmentToTelegram(user *User, kind, fileURL, caption string) error {
+func forwardSupportAttachmentToTelegram(user *User, kind, filename string, data []byte, caption string) error {
 	method, field := telegramMediaMethod(kind)
 	header := fmt.Sprintf("📎 Вложение в поддержку от %s (%s)", user.FullName, user.Phone)
 	full := header
@@ -193,7 +219,7 @@ func forwardSupportAttachmentToTelegram(user *User, kind, fileURL, caption strin
 		full += "\n\n" + caption
 	}
 	full += "\n\n— Ответьте на это сообщение (Reply), чтобы ответ ушёл пользователю в чат."
-	parsed, err := sendTelegramMedia(method, field, fileURL, full)
+	parsed, err := sendTelegramMediaBytes(method, field, filename, data, full)
 	if err != nil {
 		log.Printf("[telegram-relay] не удалось переслать вложение (kind=%s): %v", kind, err)
 		return err
@@ -203,7 +229,7 @@ func forwardSupportAttachmentToTelegram(user *User, kind, fileURL, caption strin
 }
 
 // forwardGuestAttachmentToTelegram — то же самое для гостя без аккаунта.
-func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, fileURL, caption string) error {
+func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, filename string, data []byte, caption string) error {
 	method, field := telegramMediaMethod(kind)
 	header := fmt.Sprintf("🆘 Вложение без аккаунта от %s (%s)", name, contact)
 	full := header
@@ -211,7 +237,7 @@ func forwardGuestAttachmentToTelegram(guestID, name, contact, kind, fileURL, cap
 		full += "\n\n" + caption
 	}
 	full += "\n\n— Ответьте на это сообщение (Reply), ответ уйдёт прямо в чат на сайте."
-	parsed, err := sendTelegramMedia(method, field, fileURL, full)
+	parsed, err := sendTelegramMediaBytes(method, field, filename, data, full)
 	if err != nil {
 		log.Printf("[telegram-relay] не удалось переслать гостевое вложение (kind=%s): %v", kind, err)
 		return err

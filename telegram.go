@@ -19,7 +19,7 @@ import (
 //     через @userinfobot) и задайте его в TELEGRAM_CHAT_ID.
 //  3. Задайте обе переменные окружения на Render — уведомления заработают
 //     без изменений кода.
-var telegramClient = &http.Client{Timeout: 10 * time.Second}
+var telegramClient = &http.Client{Timeout: 30 * time.Second}
 
 // notifyTelegram отправляет произвольный текст в личный чат администратора.
 // Если переменные окружения не заданы — событие просто уходит в лог, ничего не падает.
